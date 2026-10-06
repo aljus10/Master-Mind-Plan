@@ -5,6 +5,8 @@ app/node_modules
 # Production builds
 dist
 app/dist
+dist-electron
+app/dist-electron
 dist-ssr
 app/dist-ssr
 

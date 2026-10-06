@@ -19,6 +19,18 @@ export interface SaveResult {
   error?: string;
 }
 
+declare global {
+  interface Window {
+    electronAPI?: {
+      isElectron: boolean;
+      initialWorkspace: string | null;
+      saveWorkspace: (serializedData: string) => Promise<{ success: boolean; error?: string }>;
+      revealDataFolder: () => Promise<boolean>;
+      getDataFilePath: () => Promise<string>;
+    };
+  }
+}
+
 export class Repository {
   private storageKey: string;
 
@@ -27,12 +39,19 @@ export class Repository {
   }
 
   /**
-   * Loads the workspace from localStorage.
+   * Loads the workspace from Electron disk storage or localStorage.
    * If empty, returns empty workspace with revision 0.
    * If corrupt/unparseable, sets isCorrupt: true and keeps raw data for recovery.
    */
   loadWorkspace(): LoadResult {
-    const raw = localStorage.getItem(this.storageKey);
+    let raw: string | null = null;
+
+    if (typeof window !== 'undefined' && window.electronAPI?.initialWorkspace) {
+      raw = window.electronAPI.initialWorkspace;
+    } else if (typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem(this.storageKey);
+    }
+
     if (!raw) {
       return {
         workspace: createEmptyWorkspace(),
@@ -59,7 +78,7 @@ export class Repository {
   }
 
   /**
-   * Commits and saves workspace to localStorage.
+   * Commits and saves workspace to localStorage and native disk (if running in Electron).
    * Increments revision. Returns success: true only AFTER storage write succeeds.
    */
   saveWorkspace(workspace: Workspace, currentRevision: number): SaveResult {
@@ -73,7 +92,12 @@ export class Repository {
 
     try {
       const serialized = JSON.stringify(backup);
-      localStorage.setItem(this.storageKey, serialized);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(this.storageKey, serialized);
+      }
+      if (typeof window !== 'undefined' && window.electronAPI?.saveWorkspace) {
+        window.electronAPI.saveWorkspace(serialized);
+      }
       return { success: true, newRevision: nextRevision };
     } catch (err) {
       return {

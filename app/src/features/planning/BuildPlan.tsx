@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWorkspace } from '../../app/WorkspaceContext';
 import { Build, Id, PlanView } from '../../domain/types';
+import { calculateProgress } from '../../domain/readiness';
 import { CalendarPlanView } from '../calendar/CalendarPlanView';
 import { ListPlanView } from './ListPlanView';
 import { BoardPlanView } from './BoardPlanView';
@@ -15,7 +16,7 @@ export const BuildPlan: React.FC<BuildPlanProps> = ({ build, onOpenTask }) => {
   const planView = build.planView || 'calendar';
 
   const buildTasks = workspace.tasks.filter(t => t.buildId === build.id);
-  const doneTasksCount = buildTasks.filter(t => t.status === 'done').length;
+  const progress = calculateProgress(buildTasks);
 
   const setPlanView = (v: PlanView) => {
     updateBuild(build.id, { planView: v });
@@ -70,7 +71,13 @@ export const BuildPlan: React.FC<BuildPlanProps> = ({ build, onOpenTask }) => {
         </div>
 
         <span className="progress-label">
-          <b>{doneTasksCount} / {buildTasks.length}</b> tasks complete
+          {progress.isUnplanned ? (
+            <span>Not planned yet</span>
+          ) : (
+            <>
+              <b>{progress.doneLeafUnits} / {progress.totalLeafUnits}</b> steps complete ({progress.percentage}%)
+            </>
+          )}
         </span>
       </div>
 

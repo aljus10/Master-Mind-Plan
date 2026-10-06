@@ -93,6 +93,26 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 800 }}>
+        {/* Windows Native Desktop Storage Indicator */}
+        {window.electronAPI?.isElectron && (
+          <div className="overview-panel" style={{ border: '1px solid #4a3e66', background: '#13111c' }}>
+            <h3 style={{ color: 'var(--accent)' }}>💻 Windows Desktop Physical Storage</h3>
+            <p>
+              Master Mind Plan is running as a native Windows desktop application. Your builds, calendar
+              dates, and progress are stored directly as a real JSON file on your computer's hard drive.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => window.electronAPI?.revealDataFolder()}
+              >
+                📁 Open File Location in Windows Explorer
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Local Storage Privacy Note */}
         <div className="overview-panel">
           <h3>Local Storage Privacy</h3>
