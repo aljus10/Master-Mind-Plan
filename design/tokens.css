@@ -1,0 +1,18 @@
+:root {
+  color-scheme: dark;
+  --bg: #09090b;
+  --sidebar: #0c0c0f;
+  --surface: #121216;
+  --surface-raised: #19191f;
+  --border: #292930;
+  --text: #f4f4f5;
+  --secondary: #b0b0bb;
+  --muted: #92929f;
+  --accent: #b5a1ff;
+  --success: #7eddb5;
+  --warning: #f0c677;
+  --error: #ff9aa7;
+  --radius-sm: 10px;
+  --radius-panel: 16px;
+  --font: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

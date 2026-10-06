@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "revision": 1,
+  "updatedAt": "2026-10-05T13:30:00Z",
+  "workspace": {
+    "builds": [
+      {
+        "id": "build-journal",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "title": "Journal",
+        "description": "Emotions, habits, and a little direction for every day.",
+        "category": "Personal app",
+        "goal": "Understand my emotions and create helpful daily routines.",
+        "definitionOfDone": "I can save a daily check-in, choose an emotion, read a sourced coping cue, and track a small habit.",
+        "status": "active",
+        "order": 0,
+        "pinned": true,
+        "archivedAt": null,
+        "nextAction": {
+          "taskId": "task-emotion-cards",
+          "subtaskId": "subtask-wording"
+        },
+        "constraints": {
+          "timeNotes": "Short evening sessions",
+          "budgetNotes": "Start with a local personal version",
+          "resourceNotes": "Collect sources before deciding features"
+        },
+        "planView": "calendar",
+        "calendarView": "month",
+        "calendarAnchorDate": "2026-10-05"
+      },
+      {
+        "id": "build-organizer",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "title": "Future Build Organizer",
+        "description": "A home for the things I want to make.",
+        "category": "Personal app",
+        "goal": "Organize future builds and choose manageable next steps.",
+        "definitionOfDone": "I can capture builds, break them down, schedule steps by dragging, and recover a backup.",
+        "status": "planned",
+        "order": 0,
+        "pinned": false,
+        "archivedAt": null,
+        "nextAction": null,
+        "constraints": {
+          "timeNotes": "Short evening sessions",
+          "budgetNotes": "Start with a local personal version",
+          "resourceNotes": "Collect sources before deciding features"
+        },
+        "planView": "calendar",
+        "calendarView": "month",
+        "calendarAnchorDate": "2026-10-05"
+      }
+    ],
+    "milestones": [
+      {
+        "id": "milestone-scope",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Shape the first version",
+        "outcome": "A small clear scope and initial content",
+        "order": 0
+      },
+      {
+        "id": "milestone-design",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Design the daily flow",
+        "outcome": "A workable check-in prototype",
+        "order": 1
+      },
+      {
+        "id": "milestone-organizer",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-organizer",
+        "title": "Build the organizer",
+        "outcome": "A working personal planning app",
+        "order": 0
+      }
+    ],
+    "tasks": [
+      {
+        "id": "task-scope",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-scope",
+        "title": "Define the first version",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "done",
+        "priority": "normal",
+        "order": 0,
+        "boardOrder": 0,
+        "estimatedMinutes": 25,
+        "plannedDate": "2026-10-02",
+        "calendarOrder": 0,
+        "blocker": "",
+        "prerequisiteTaskIds": [],
+        "subtasks": []
+      },
+      {
+        "id": "task-emotions",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-scope",
+        "title": "Choose initial emotions",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "done",
+        "priority": "normal",
+        "order": 1,
+        "boardOrder": 1,
+        "estimatedMinutes": 20,
+        "plannedDate": "2026-10-04",
+        "calendarOrder": 1,
+        "blocker": "",
+        "prerequisiteTaskIds": [],
+        "subtasks": []
+      },
+      {
+        "id": "task-emotion-cards",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-scope",
+        "title": "Write emotion action cards",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "doing",
+        "priority": "normal",
+        "order": 2,
+        "boardOrder": 2,
+        "estimatedMinutes": 45,
+        "plannedDate": "2026-10-05",
+        "calendarOrder": 2,
+        "blocker": "",
+        "prerequisiteTaskIds": [
+          "task-emotions"
+        ],
+        "subtasks": [
+          {
+            "id": "subtask-source",
+            "title": "Choose reliable sources",
+            "done": true,
+            "order": 0
+          },
+          {
+            "id": "subtask-wording",
+            "title": "Write practical cue wording",
+            "done": false,
+            "order": 1
+          }
+        ]
+      },
+      {
+        "id": "task-check-in",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-design",
+        "title": "Sketch the daily check-in",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 0,
+        "boardOrder": 0,
+        "estimatedMinutes": 30,
+        "plannedDate": "2026-10-07",
+        "calendarOrder": 0,
+        "blocker": "",
+        "prerequisiteTaskIds": [
+          "task-scope"
+        ],
+        "subtasks": []
+      },
+      {
+        "id": "task-habits",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-design",
+        "title": "Map the habit check-in",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 1,
+        "boardOrder": 1,
+        "estimatedMinutes": 25,
+        "plannedDate": "2026-10-08",
+        "calendarOrder": 1,
+        "blocker": "",
+        "prerequisiteTaskIds": [],
+        "subtasks": []
+      },
+      {
+        "id": "task-reflection",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-design",
+        "title": "Design weekly reflection",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 2,
+        "boardOrder": 2,
+        "estimatedMinutes": 30,
+        "plannedDate": "2026-10-12",
+        "calendarOrder": 2,
+        "blocker": "",
+        "prerequisiteTaskIds": [],
+        "subtasks": []
+      },
+      {
+        "id": "task-fields",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-design",
+        "title": "Draft the data fields",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 3,
+        "boardOrder": 3,
+        "estimatedMinutes": 20,
+        "plannedDate": null,
+        "calendarOrder": 3,
+        "blocker": "",
+        "prerequisiteTaskIds": [],
+        "subtasks": []
+      },
+      {
+        "id": "task-privacy",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-scope",
+        "title": "Plan privacy and backups",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 3,
+        "boardOrder": 3,
+        "estimatedMinutes": 35,
+        "plannedDate": null,
+        "calendarOrder": 3,
+        "blocker": "",
+        "prerequisiteTaskIds": [],
+        "subtasks": []
+      },
+      {
+        "id": "task-prototype",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-design",
+        "title": "Prototype the check-in",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 4,
+        "boardOrder": 4,
+        "estimatedMinutes": 60,
+        "plannedDate": "2026-10-15",
+        "calendarOrder": 4,
+        "blocker": "",
+        "prerequisiteTaskIds": [
+          "task-check-in",
+          "task-fields"
+        ],
+        "subtasks": []
+      },
+      {
+        "id": "task-test",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "milestoneId": "milestone-design",
+        "title": "Test the journal routine",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 5,
+        "boardOrder": 5,
+        "estimatedMinutes": 20,
+        "plannedDate": null,
+        "calendarOrder": 5,
+        "blocker": "",
+        "prerequisiteTaskIds": [
+          "task-prototype"
+        ],
+        "subtasks": []
+      },
+      {
+        "id": "task-organizer-ui",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-organizer",
+        "milestoneId": "milestone-organizer",
+        "title": "Implement the calendar layout",
+        "description": "Sample planning step; edit or remove it when using this data.",
+        "status": "todo",
+        "priority": "normal",
+        "order": 0,
+        "boardOrder": 0,
+        "estimatedMinutes": 60,
+        "plannedDate": "2026-10-06",
+        "calendarOrder": 0,
+        "blocker": "",
+        "prerequisiteTaskIds": [],
+        "subtasks": []
+      }
+    ],
+    "ideas": [
+      {
+        "id": "idea-coping",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Emotion coping cards",
+        "description": "Initial sourced cues for everyday feelings.",
+        "group": "candidate",
+        "order": 0,
+        "tags": [],
+        "convertedTo": {
+          "kind": "feature",
+          "id": "feature-coping"
+        }
+      },
+      {
+        "id": "idea-morning",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Morning intention",
+        "description": "A short prompt to choose the tone of the day.",
+        "group": "inbox",
+        "order": 1,
+        "tags": [],
+        "convertedTo": null
+      },
+      {
+        "id": "idea-trends",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Mood patterns",
+        "description": "See recurring patterns after enough entries exist.",
+        "group": "later",
+        "order": 2,
+        "tags": [],
+        "convertedTo": null
+      },
+      {
+        "id": "idea-prompts",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Personal reflection prompts",
+        "description": "More prompts after the basic check-in is useful.",
+        "group": "later",
+        "order": 3,
+        "tags": [],
+        "convertedTo": null
+      },
+      {
+        "id": "idea-habits",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Habit check-in",
+        "description": "Track a few chosen habits without overwhelming setup.",
+        "group": "candidate",
+        "order": 4,
+        "tags": [],
+        "convertedTo": null
+      }
+    ],
+    "features": [
+      {
+        "id": "feature-daily",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Daily check-in",
+        "description": "Save a brief entry and emotion",
+        "achieved": false,
+        "order": 0
+      },
+      {
+        "id": "feature-coping",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Emotion coping cards",
+        "description": "Sourced practical cues",
+        "achieved": false,
+        "order": 1
+      }
+    ],
+    "notes": [
+      {
+        "id": "note-scope",
+        "createdAt": "2026-10-05T13:30:00Z",
+        "updatedAt": "2026-10-05T13:30:00Z",
+        "buildId": "build-journal",
+        "title": "Keep the first version small",
+        "body": "Start with daily entry and an initial set of verified emotion-management cues. Save additional journal ideas in Later. The organizer stores the plan; it is not the journal itself.",
+        "links": [],
+        "order": 0
+      }
+    ],
+    "reviews": [],
+    "preferences": {
+      "startArea": "builds",
+      "buildsView": "board"
+    }
+  }
+}

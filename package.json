@@ -1,0 +1,12 @@
+{
+  "name": "master-mind-plan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Capture future builds, define first versions, and turn builds into clear next actions.",
+  "scripts": {
+    "dev": "npm --prefix app run dev",
+    "build": "npm --prefix app run build",
+    "test": "npm --prefix app test",
+    "preview": "npm --prefix app run preview"
+  }
+}
