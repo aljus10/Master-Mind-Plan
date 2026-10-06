@@ -31,14 +31,14 @@ function createWindow() {
     }
   });
 
-  if (process.env.VITE_DEV_SERVER_URL) {
+  if (app.isPackaged) {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  } else if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else if (process.env.USE_DEV_SERVER) {
     mainWindow.loadURL('http://localhost:5173');
-  } else if (fs.existsSync(path.join(__dirname, '../dist/index.html'))) {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   } else {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
   // Open external links in default browser instead of Electron window
@@ -48,6 +48,14 @@ function createWindow() {
       return { action: 'deny' };
     }
     return { action: 'allow' };
+  });
+
+  // Enable F12 DevTools shortcut for testing
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12') {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
   });
 
   mainWindow.on('closed', () => {

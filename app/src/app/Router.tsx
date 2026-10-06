@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useWorkspace } from './WorkspaceContext';
 import { Layout } from './Layout';
 import { BuildsPage } from '../features/builds/BuildsPage';
@@ -23,7 +23,7 @@ const BuildDefaultTabRedirect: React.FC = () => {
 
 export const AppRouter: React.FC = () => {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<RootRedirect />} />
@@ -36,6 +36,6 @@ export const AppRouter: React.FC = () => {
           <Route path="*" element={<Navigate to="/builds" replace />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
