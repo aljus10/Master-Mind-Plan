@@ -7,7 +7,7 @@ export type TaskStatus = 'todo' | 'doing' | 'blocked' | 'done';
 export type Priority = 'low' | 'normal' | 'high';
 export type IdeaGroup = 'inbox' | 'candidate' | 'later' | 'dropped';
 export type PlanView = 'calendar' | 'list' | 'board';
-export type CalendarViewMode = 'month' | 'week';
+export type CalendarViewMode = 'month' | 'week' | 'agenda';
 
 export interface RecordMeta {
   id: Id;

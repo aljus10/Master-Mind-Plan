@@ -47,6 +47,37 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, className = '
   const subtasksCount = task.subtasks?.length || 0;
   const doneSubtasksCount = task.subtasks?.filter(s => s.done).length || 0;
 
+  if (isCompact) {
+    const iconSymbol =
+      visualStatus === 'done'
+        ? '✓'
+        : visualStatus === 'doing'
+        ? '⚡'
+        : visualStatus === 'blocked'
+        ? '⚠'
+        : '●';
+
+    return (
+      <button
+        type="button"
+        className={`task-icon-badge ${visualStatus} ${className}`}
+        draggable
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onClick={e => {
+          e.stopPropagation();
+          onClick(task);
+        }}
+        onKeyDown={handleKeyDown}
+        aria-label={`${task.title}, ${statusLabel}. Open for details.`}
+        title={`${task.title} (${statusLabel})`}
+      >
+        <span className="badge-icon" aria-hidden="true">{iconSymbol}</span>
+        <span className="badge-title">{task.title}</span>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

@@ -32,7 +32,7 @@ export const SettingsPage: React.FC = () => {
   const [targetPairKey, setTargetPairKey] = useState('');
   const [supabaseUrl, setSupabaseUrl] = useState(() => getSupabaseConfig().url);
   const [supabaseAnonKey, setSupabaseAnonKey] = useState(() => getSupabaseConfig().anonKey);
-  const [showCloudConfig, setShowCloudConfig] = useState(false);
+  const [showCloudConfig, setShowCloudConfig] = useState(() => !getSupabaseConfig().url || !getSupabaseConfig().anonKey);
   const [isPairingLoading, setIsPairingLoading] = useState(false);
 
   // Download backup handler
@@ -192,9 +192,120 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Device Pairing Section */}
+          {/* Supabase Cloud Database Setup */}
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+              <div>
+                <strong style={{ fontSize: 14, color: 'var(--text)' }}>
+                  🌐 Supabase Project Connection
+                </strong>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                  Enter the credentials from your Supabase project (from Project Settings → API).
+                </p>
+              </div>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShowCloudConfig(prev => !prev)}
+                style={{ fontSize: 12, padding: '5px 10px', minHeight: 32 }}
+              >
+                {showCloudConfig ? '▲ Hide Form' : '⚙ Edit Supabase Credentials'}
+              </button>
+            </div>
+
+            {showCloudConfig && (
+              <form
+                onSubmit={handleSaveCloudConfig}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                  background: 'var(--surface-raised)',
+                  padding: '14px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  marginBottom: 16
+                }}
+              >
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 5 }}>
+                    Supabase Project URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://xyzcompany.supabase.co"
+                    value={supabaseUrl}
+                    onChange={e => setSupabaseUrl(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      background: '#16151f',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      fontSize: 13,
+                      minHeight: 40
+                    }}
+                  />
+                  <small style={{ color: 'var(--muted)', fontSize: 11, marginTop: 4, display: 'block' }}>
+                    Found in Supabase under Project Settings → API → Project URL
+                  </small>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 5 }}>
+                    Supabase Anon / Public Key
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                    value={supabaseAnonKey}
+                    onChange={e => setSupabaseAnonKey(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: 6,
+                      background: '#16151f',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      fontSize: 13,
+                      minHeight: 40
+                    }}
+                  />
+                  <small style={{ color: 'var(--muted)', fontSize: 11, marginTop: 4, display: 'block' }}>
+                    Found in Supabase under Project Settings → API → Project API Keys (anon public)
+                  </small>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+                  <button
+                    type="submit"
+                    className="primary"
+                    disabled={isPairingLoading}
+                    style={{ fontSize: 13, padding: '9px 18px', minHeight: 40 }}
+                  >
+                    {isPairingLoading ? 'Connecting...' : '💾 Save & Connect Cloud'}
+                  </button>
+                  {cloudSyncStatus !== 'disabled' && (
+                    <button
+                      type="button"
+                      className="danger-btn"
+                      onClick={disconnectCloudSync}
+                      style={{ fontSize: 12, padding: '8px 14px', minHeight: 40 }}
+                    >
+                      Disconnect Cloud
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+
+            {/* Device Pairing Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* This Device's Key */}
               <div
                 style={{
@@ -218,11 +329,11 @@ export const SettingsPage: React.FC = () => {
                       letterSpacing: '0.8px'
                     }}
                   >
-                    This Device Pairing Key
+                    This Device's Pairing Key
                   </div>
                   <div
                     style={{
-                      fontSize: 18,
+                      fontSize: 19,
                       fontWeight: 700,
                       letterSpacing: '1px',
                       color: 'var(--accent)',
@@ -232,12 +343,12 @@ export const SettingsPage: React.FC = () => {
                     {syncKey}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     className="secondary"
                     onClick={handleCopyKey}
-                    style={{ fontSize: 12, padding: '6px 12px' }}
+                    style={{ fontSize: 12, padding: '7px 12px', minHeight: 36 }}
                   >
                     📋 Copy Key
                   </button>
@@ -246,7 +357,7 @@ export const SettingsPage: React.FC = () => {
                       type="button"
                       className="secondary"
                       onClick={manualCloudSync}
-                      style={{ fontSize: 12, padding: '6px 12px' }}
+                      style={{ fontSize: 12, padding: '7px 12px', minHeight: 36 }}
                     >
                       🔄 Sync Now
                     </button>
@@ -255,107 +366,53 @@ export const SettingsPage: React.FC = () => {
               </div>
 
               {/* Pair With Another Device Form */}
-              <form onSubmit={handlePair} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <input
-                  type="text"
-                  placeholder="Enter Pairing Key from your other device (e.g. MIND-XXXX)"
-                  value={targetPairKey}
-                  onChange={e => setTargetPairKey(e.target.value)}
-                  style={{
-                    flex: 1,
-                    minWidth: 260,
-                    padding: '9px 12px',
-                    borderRadius: 8,
-                    background: 'var(--surface-raised)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--text)',
-                    fontSize: 13
-                  }}
-                />
-                <button
-                  type="submit"
-                  className="primary"
-                  disabled={isPairingLoading || !targetPairKey.trim()}
-                  style={{ fontSize: 13, minHeight: 38 }}
-                >
-                  {isPairingLoading ? 'Pairing...' : '🔗 Pair & Link Devices'}
-                </button>
+              <form
+                onSubmit={handlePair}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  background: 'var(--surface-raised)',
+                  padding: '12px 14px',
+                  borderRadius: 8,
+                  border: '1px solid var(--border)'
+                }}
+              >
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
+                  🔗 Link to Another Device (PC or Phone)
+                </label>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter Pairing Key (e.g. MIND-XXXX)"
+                    value={targetPairKey}
+                    onChange={e => setTargetPairKey(e.target.value)}
+                    style={{
+                      flex: 1,
+                      minWidth: 180,
+                      padding: '9px 12px',
+                      borderRadius: 6,
+                      background: '#16151f',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      fontSize: 13,
+                      minHeight: 40,
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="primary"
+                    disabled={isPairingLoading || !targetPairKey.trim()}
+                    style={{ fontSize: 13, minHeight: 40, padding: '0 16px' }}
+                  >
+                    {isPairingLoading ? 'Pairing...' : 'Link Device'}
+                  </button>
+                </div>
+                <small style={{ color: 'var(--muted)', fontSize: 11 }}>
+                  Enter the pairing key from your other device to synchronize your workspaces instantly.
+                </small>
               </form>
-
-              {/* Collapsible Supabase Project Setup */}
-              <div style={{ borderTop: '1px dashed #2d2b38', paddingTop: 12 }}>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => setShowCloudConfig(!showCloudConfig)}
-                  style={{ fontSize: 12, padding: '4px 10px', minHeight: 30 }}
-                >
-                  {showCloudConfig ? '▲ Hide Cloud Server Config' : '⚙ Free Supabase Cloud Configuration (Click to configure)'}
-                </button>
-
-                {showCloudConfig && (
-                  <form onSubmit={handleSaveCloudConfig} style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-                      Connect your 100% free Supabase project to enable cloud sync. Enter your project API credentials below:
-                    </p>
-                    <div>
-                      <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
-                        Supabase Project URL
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://xyzcompany.supabase.co"
-                        value={supabaseUrl}
-                        onChange={e => setSupabaseUrl(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: 6,
-                          background: 'var(--surface-raised)',
-                          border: '1px solid var(--border)',
-                          color: 'var(--text)',
-                          fontSize: 13
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
-                        Supabase Anon / Public Key
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-                        value={supabaseAnonKey}
-                        onChange={e => setSupabaseAnonKey(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: 6,
-                          background: 'var(--surface-raised)',
-                          border: '1px solid var(--border)',
-                          color: 'var(--text)',
-                          fontSize: 13
-                        }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                      <button type="submit" className="primary" style={{ fontSize: 12, padding: '7px 14px' }}>
-                        Save & Connect Cloud
-                      </button>
-                      {cloudSyncStatus !== 'disabled' && (
-                        <button
-                          type="button"
-                          className="danger-btn"
-                          onClick={disconnectCloudSync}
-                          style={{ fontSize: 12, padding: '7px 14px' }}
-                        >
-                          Disconnect Cloud
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                )}
-              </div>
             </div>
           </div>
         </div>

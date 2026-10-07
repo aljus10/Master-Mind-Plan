@@ -254,6 +254,55 @@ export const Layout: React.FC = () => {
         </main>
       </div>
 
+      {/* Persistent Mobile Bottom Navigation Bar */}
+      <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
+        <NavLink
+          to="/builds"
+          className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
+        >
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+          <span>Builds</span>
+        </NavLink>
+
+        <NavLink
+          to="/next"
+          className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="m5 12 4 4L19 6" />
+            <path d="M5 21h14" />
+          </svg>
+          <span>Next</span>
+        </NavLink>
+
+        <NavLink
+          to="/settings"
+          className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
+        >
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1" />
+          </svg>
+          <span>Settings</span>
+        </NavLink>
+
+        <NavLink
+          to="/archive"
+          className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
+        >
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="4" rx="1" />
+            <path d="M5 7v14h14V7M10 11h4" />
+          </svg>
+          <span>Archive</span>
+        </NavLink>
+      </nav>
+
       <Toast />
       <CorruptRecoveryModal />
     </>
