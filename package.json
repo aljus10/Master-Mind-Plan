@@ -8,6 +8,7 @@
     "build": "npm --prefix app run build",
     "electron:dev": "npm --prefix app run electron:dev",
     "electron:build": "npm --prefix app run electron:build",
+    "android:build": "npm --prefix app run android:build",
     "test": "npm --prefix app test",
     "preview": "npm --prefix app run preview"
   }

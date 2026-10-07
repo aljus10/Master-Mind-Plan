@@ -7,6 +7,8 @@ dist
 app/dist
 dist-electron
 app/dist-electron
+dist-apk
+*.apk
 dist-ssr
 app/dist-ssr
 

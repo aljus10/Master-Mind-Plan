@@ -9,6 +9,8 @@
     "build": "tsc -b && vite build",
     "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
     "electron:build": "tsc -b && vite build && electron-builder --win",
+    "android:sync": "npx cap sync android",
+    "android:build": "npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug && cd ..",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run"
@@ -38,11 +40,15 @@
     }
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/status-bar": "^8.0.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.9",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
