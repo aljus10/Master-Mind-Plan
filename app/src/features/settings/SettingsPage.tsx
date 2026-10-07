@@ -20,7 +20,8 @@ export const SettingsPage: React.FC = () => {
     configureCloudSync,
     pairDeviceWithKey,
     manualCloudSync,
-    disconnectCloudSync
+    disconnectCloudSync,
+    restorePrePairBackup
   } = useWorkspace();
 
   const [importValidation, setImportValidation] = useState<ValidationResult | null>(null);
@@ -409,9 +410,20 @@ export const SettingsPage: React.FC = () => {
                     {isPairingLoading ? 'Pairing...' : 'Link Device'}
                   </button>
                 </div>
-                <small style={{ color: 'var(--muted)', fontSize: 11 }}>
-                  Enter the pairing key from your other device to synchronize your workspaces instantly.
-                </small>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, flexWrap: 'wrap', gap: 8 }}>
+                  <small style={{ color: 'var(--muted)', fontSize: 11 }}>
+                    Enter the pairing key from your other device to synchronize your workspaces instantly.
+                  </small>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={restorePrePairBackup}
+                    style={{ fontSize: 11, padding: '3px 8px', minHeight: 26 }}
+                    title="Restore workspace snapshot from before the last pairing operation"
+                  >
+                    ↺ Restore Pre-Pairing Snapshot
+                  </button>
+                </div>
               </form>
             </div>
           </div>

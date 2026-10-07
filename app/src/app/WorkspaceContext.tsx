@@ -22,6 +22,7 @@ import { getTodayDate } from '../domain/dates';
 import { moveItemDirection, normalizeOrder, reorderItems } from '../domain/ordering';
 import { deriveStatusFromSubtasks, getTaskBlockerInfo } from '../domain/readiness';
 import { wouldIntroduceCycle } from '../domain/cycles';
+import { mergeWorkspaces } from '../storage/merge';
 import { repository, Repository } from '../storage/repository';
 import { getSampleWorkspace, createEmptyWorkspace } from '../storage/sampleData';
 import {
@@ -55,6 +56,7 @@ interface WorkspaceContextType {
   pairDeviceWithKey: (key: string) => Promise<boolean>;
   manualCloudSync: () => Promise<boolean>;
   disconnectCloudSync: () => void;
+  restorePrePairBackup: () => boolean;
 
   // Global preferences
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
@@ -338,25 +340,96 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return false;
       }
       const cleanKey = targetKey.trim().toUpperCase();
+
+      // Automatic safety snapshot of current data before pairing
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(
+            'future-build-organizer:pre-pair-backup',
+            JSON.stringify({
+              schemaVersion: 1,
+              revision: currentRevisionRef.current,
+              updatedAt: new Date().toISOString(),
+              workspace: currentWorkspaceRef.current
+            })
+          );
+        }
+      } catch (e) {}
+
       saveSupabaseConfig(cfg.url, cfg.anonKey, cleanKey);
       setSyncKey(cleanKey);
 
       const remote = await fetchFromCloud(cleanKey);
-      if (remote.success && remote.workspace && remote.revision) {
-        currentRevisionRef.current = remote.revision;
-        setRevision(remote.revision);
-        setWorkspace(remote.workspace);
-        repository.saveWorkspace(remote.workspace, remote.revision);
+      if (remote.success && remote.workspace && remote.revision !== undefined) {
+        const localBuilds = currentWorkspaceRef.current.builds;
+        const remoteBuilds = remote.workspace.builds;
+
+        let finalWorkspace = remote.workspace;
+        let finalRev = remote.revision;
+
+        // If local device has builds, smartly preserve/merge them so nothing is lost
+        if (localBuilds.length > 0) {
+          if (remoteBuilds.length === 0) {
+            finalWorkspace = currentWorkspaceRef.current;
+            finalRev = Math.max(remote.revision, currentRevisionRef.current) + 1;
+            uploadToCloud(cleanKey, finalWorkspace, finalRev);
+          } else {
+            finalWorkspace = mergeWorkspaces(currentWorkspaceRef.current, remote.workspace);
+            finalRev = Math.max(remote.revision, currentRevisionRef.current) + 1;
+            uploadToCloud(cleanKey, finalWorkspace, finalRev);
+          }
+        }
+
+        currentRevisionRef.current = finalRev;
+        setRevision(finalRev);
+        setWorkspace(finalWorkspace);
+        repository.saveWorkspace(finalWorkspace, finalRev);
         setCloudStatus('connected');
         showToast(`Paired with ${cleanKey}! Workspace synced.`);
         return true;
       } else {
+        // If remote has no data yet for this key, upload current workspace
+        if (currentWorkspaceRef.current.builds.length > 0) {
+          const rev = currentRevisionRef.current + 1;
+          currentRevisionRef.current = rev;
+          setRevision(rev);
+          uploadToCloud(cleanKey, currentWorkspaceRef.current, rev);
+          setCloudStatus('connected');
+          showToast(`Paired with ${cleanKey}! Workspace uploaded to cloud.`);
+          return true;
+        }
         showToast(`Pairing failed: ${remote.error || 'Key not found'}`);
         return false;
       }
     },
     [showToast]
   );
+
+  const restorePrePairBackup = useCallback((): boolean => {
+    try {
+      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('future-build-organizer:pre-pair-backup') : null;
+      if (!saved) {
+        showToast('No pre-pairing backup found in storage.');
+        return false;
+      }
+      const parsed = JSON.parse(saved);
+      if (parsed.workspace) {
+        const nextRev = (parsed.revision || currentRevisionRef.current) + 1;
+        currentRevisionRef.current = nextRev;
+        setRevision(nextRev);
+        setWorkspace(parsed.workspace);
+        repository.saveWorkspace(parsed.workspace, nextRev);
+        const cfg = getSupabaseConfig();
+        if (cfg.url && cfg.anonKey && cfg.syncKey) {
+          uploadToCloud(cfg.syncKey, parsed.workspace, nextRev);
+        }
+        showToast('Restored pre-pairing backup successfully!');
+        return true;
+      }
+    } catch (e) {}
+    showToast('Failed to restore backup.');
+    return false;
+  }, [showToast]);
 
   const manualCloudSync = useCallback(async (): Promise<boolean> => {
     const cfg = getSupabaseConfig();
@@ -1506,6 +1579,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         pairDeviceWithKey,
         manualCloudSync,
         disconnectCloudSync,
+        restorePrePairBackup,
         updatePreferences,
         addBuild,
         updateBuild,
