@@ -24,20 +24,37 @@ import { deriveStatusFromSubtasks, getTaskBlockerInfo } from '../domain/readines
 import { wouldIntroduceCycle } from '../domain/cycles';
 import { repository, Repository } from '../storage/repository';
 import { getSampleWorkspace, createEmptyWorkspace } from '../storage/sampleData';
+import {
+  clearSupabaseConfig,
+  fetchFromCloud,
+  getSupabaseConfig,
+  saveSupabaseConfig,
+  subscribeToCloudChanges,
+  uploadToCloud
+} from '../storage/supabaseSync';
 
 export type SaveStatus = 'saved' | 'saving' | 'error';
+export type CloudSyncStatus = 'disabled' | 'connected' | 'syncing' | 'error';
 
 interface WorkspaceContextType {
   workspace: Workspace;
   revision: number;
   saveStatus: SaveStatus;
   saveErrorMessage: string | null;
+  cloudSyncStatus: CloudSyncStatus;
+  syncKey: string;
   isCorrupt: boolean;
   rawCorruptData: string | null;
   hasMultiTabConflict: boolean;
   toastMessage: string | null;
   showToast: (msg: string) => void;
   clearToast: () => void;
+
+  // Cloud sync & pairing actions
+  configureCloudSync: (url: string, anonKey: string, syncKey?: string) => Promise<boolean>;
+  pairDeviceWithKey: (key: string) => Promise<boolean>;
+  manualCloudSync: () => Promise<boolean>;
+  disconnectCloudSync: () => void;
 
   // Global preferences
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
@@ -148,6 +165,15 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [hasMultiTabConflict, setHasMultiTabConflict] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Cloud sync state
+  const [cloudStatus, setCloudStatus] = useState<CloudSyncStatus>(() => {
+    const cfg = getSupabaseConfig();
+    return cfg.url && cfg.anonKey ? 'connected' : 'disabled';
+  });
+  const [syncKey, setSyncKey] = useState<string>(() => {
+    return getSupabaseConfig().syncKey;
+  });
+
   // References for debouncing & flush
   const pendingSaveTimeout = useRef<number | null>(null);
   const currentWorkspaceRef = useRef<Workspace>(workspace);
@@ -187,6 +213,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSaveStatus('saved');
         setSaveErrorMessage(null);
         isDirtyRef.current = false;
+
+        // Background non-blocking cloud upload
+        const cfg = getSupabaseConfig();
+        if (cfg.url && cfg.anonKey && cfg.syncKey) {
+          uploadToCloud(cfg.syncKey, ws, res.newRevision).then(uploadRes => {
+            if (!uploadRes.success) {
+              console.warn('[Sync] Cloud upload warning:', uploadRes.error);
+            }
+          });
+        }
       } else {
         setSaveStatus('error');
         setSaveErrorMessage(res.error || 'Write error');
@@ -249,6 +285,111 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       window.removeEventListener('pagehide', handlePageHide);
     };
   }, []);
+
+  // Realtime cloud synchronization
+  useEffect(() => {
+    const cfg = getSupabaseConfig();
+    if (!cfg.url || !cfg.anonKey || !cfg.syncKey) {
+      setCloudStatus('disabled');
+      return;
+    }
+
+    setCloudStatus('connected');
+    const unsubscribe = subscribeToCloudChanges(cfg.syncKey, (remoteWs, remoteRev) => {
+      if (remoteRev > currentRevisionRef.current) {
+        currentRevisionRef.current = remoteRev;
+        setRevision(remoteRev);
+        setWorkspace(remoteWs);
+        repository.saveWorkspace(remoteWs, remoteRev);
+        showToast('Synced update from paired device');
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [syncKey, showToast]);
+
+  const configureCloudSync = useCallback(
+    async (url: string, anonKey: string, customSyncKey?: string): Promise<boolean> => {
+      saveSupabaseConfig(url, anonKey, customSyncKey);
+      const cfg = getSupabaseConfig();
+      setSyncKey(cfg.syncKey);
+      setCloudStatus('connected');
+
+      const res = await uploadToCloud(cfg.syncKey, currentWorkspaceRef.current, currentRevisionRef.current);
+      if (res.success) {
+        showToast(`Cloud sync connected! Device key: ${cfg.syncKey}`);
+        return true;
+      } else {
+        setCloudStatus('error');
+        showToast(`Cloud connection warning: ${res.error || 'Failed to upload'}`);
+        return false;
+      }
+    },
+    [showToast]
+  );
+
+  const pairDeviceWithKey = useCallback(
+    async (targetKey: string): Promise<boolean> => {
+      const cfg = getSupabaseConfig();
+      if (!cfg.url || !cfg.anonKey) {
+        showToast('Please configure Supabase URL & Anon Key first.');
+        return false;
+      }
+      const cleanKey = targetKey.trim().toUpperCase();
+      saveSupabaseConfig(cfg.url, cfg.anonKey, cleanKey);
+      setSyncKey(cleanKey);
+
+      const remote = await fetchFromCloud(cleanKey);
+      if (remote.success && remote.workspace && remote.revision) {
+        currentRevisionRef.current = remote.revision;
+        setRevision(remote.revision);
+        setWorkspace(remote.workspace);
+        repository.saveWorkspace(remote.workspace, remote.revision);
+        setCloudStatus('connected');
+        showToast(`Paired with ${cleanKey}! Workspace synced.`);
+        return true;
+      } else {
+        showToast(`Pairing failed: ${remote.error || 'Key not found'}`);
+        return false;
+      }
+    },
+    [showToast]
+  );
+
+  const manualCloudSync = useCallback(async (): Promise<boolean> => {
+    const cfg = getSupabaseConfig();
+    if (!cfg.url || !cfg.anonKey || !cfg.syncKey) {
+      showToast('Cloud sync is not configured.');
+      return false;
+    }
+    setCloudStatus('syncing');
+    const remote = await fetchFromCloud(cfg.syncKey);
+    if (remote.success && remote.workspace && remote.revision) {
+      if (remote.revision > currentRevisionRef.current) {
+        currentRevisionRef.current = remote.revision;
+        setRevision(remote.revision);
+        setWorkspace(remote.workspace);
+        repository.saveWorkspace(remote.workspace, remote.revision);
+        setCloudStatus('connected');
+        showToast('Pulled latest updates from cloud.');
+        return true;
+      }
+    }
+    const uploadRes = await uploadToCloud(cfg.syncKey, currentWorkspaceRef.current, currentRevisionRef.current);
+    setCloudStatus(uploadRes.success ? 'connected' : 'error');
+    if (uploadRes.success) {
+      showToast('Workspace synced to cloud.');
+    }
+    return uploadRes.success;
+  }, [showToast]);
+
+  const disconnectCloudSync = useCallback(() => {
+    clearSupabaseConfig();
+    setCloudStatus('disabled');
+    showToast('Cloud sync disconnected.');
+  }, [showToast]);
 
   // Update preferences
   const updatePreferences = useCallback((prefs: Partial<UserPreferences>) => {
@@ -1359,6 +1500,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         toastMessage,
         showToast,
         clearToast,
+        cloudSyncStatus: cloudStatus,
+        syncKey,
+        configureCloudSync,
+        pairDeviceWithKey,
+        manualCloudSync,
+        disconnectCloudSync,
         updatePreferences,
         addBuild,
         updateBuild,

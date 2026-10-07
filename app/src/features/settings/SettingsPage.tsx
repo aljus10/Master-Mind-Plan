@@ -3,6 +3,7 @@ import { useWorkspace } from '../../app/WorkspaceContext';
 import { repository, STORAGE_KEY } from '../../storage/repository';
 import { ValidationResult } from '../../storage/validation';
 import { Modal } from '../../components/Modal';
+import { getSupabaseConfig } from '../../storage/supabaseSync';
 
 export const SettingsPage: React.FC = () => {
   const {
@@ -13,13 +14,26 @@ export const SettingsPage: React.FC = () => {
     importBackup,
     loadSampleData,
     resetWorkspace,
-    showToast
+    showToast,
+    cloudSyncStatus,
+    syncKey,
+    configureCloudSync,
+    pairDeviceWithKey,
+    manualCloudSync,
+    disconnectCloudSync
   } = useWorkspace();
 
   const [importValidation, setImportValidation] = useState<ValidationResult | null>(null);
   const [importJsonText, setImportJsonText] = useState<string>('');
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Cloud sync form state
+  const [targetPairKey, setTargetPairKey] = useState('');
+  const [supabaseUrl, setSupabaseUrl] = useState(() => getSupabaseConfig().url);
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState(() => getSupabaseConfig().anonKey);
+  const [showCloudConfig, setShowCloudConfig] = useState(false);
+  const [isPairingLoading, setIsPairingLoading] = useState(false);
 
   // Download backup handler
   const handleDownloadBackup = () => {
@@ -83,6 +97,33 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const handlePair = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetPairKey.trim()) return;
+    setIsPairingLoading(true);
+    await pairDeviceWithKey(targetPairKey.trim());
+    setIsPairingLoading(false);
+    setTargetPairKey('');
+  };
+
+  const handleSaveCloudConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabaseUrl.trim() || !supabaseAnonKey.trim()) {
+      showToast('Please enter both Supabase URL and Anon Key');
+      return;
+    }
+    setIsPairingLoading(true);
+    await configureCloudSync(supabaseUrl.trim(), supabaseAnonKey.trim());
+    setIsPairingLoading(false);
+  };
+
+  const handleCopyKey = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(syncKey);
+      showToast('Pairing key copied to clipboard!');
+    }
+  };
+
   return (
     <div>
       <div className="heading">
@@ -93,6 +134,232 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 800 }}>
+        {/* Real-Time Cloud Sync & Device Pairing Panel */}
+        <div className="overview-panel" style={{ border: '1px solid #3d3550', background: '#111017' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>☁</span> Real-Time Cloud Sync & Device Pairing
+              </h3>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+                Keep your Windows PC and Mobile Phone automatically in sync in real time.
+              </p>
+            </div>
+            <div>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 10px',
+                  borderRadius: 16,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  background:
+                    cloudSyncStatus === 'connected'
+                      ? '#172b1d'
+                      : cloudSyncStatus === 'syncing'
+                      ? '#2b2315'
+                      : '#1c1b24',
+                  color:
+                    cloudSyncStatus === 'connected'
+                      ? '#58d68d'
+                      : cloudSyncStatus === 'syncing'
+                      ? '#f5b041'
+                      : 'var(--muted)',
+                  border: `1px solid ${cloudSyncStatus === 'connected' ? '#235933' : '#333140'}`
+                }}
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background:
+                      cloudSyncStatus === 'connected'
+                        ? '#58d68d'
+                        : cloudSyncStatus === 'syncing'
+                        ? '#f5b041'
+                        : '#68667a'
+                  }}
+                />
+                {cloudSyncStatus === 'connected'
+                  ? 'Cloud Connected'
+                  : cloudSyncStatus === 'syncing'
+                  ? 'Syncing...'
+                  : 'Local Only'}
+              </span>
+            </div>
+          </div>
+
+          {/* Device Pairing Section */}
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* This Device's Key */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 14px',
+                  borderRadius: 8,
+                  background: 'var(--surface-raised)',
+                  border: '1px solid var(--border)',
+                  flexWrap: 'wrap',
+                  gap: 10
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.8px'
+                    }}
+                  >
+                    This Device Pairing Key
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      letterSpacing: '1px',
+                      color: 'var(--accent)',
+                      marginTop: 2
+                    }}
+                  >
+                    {syncKey}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={handleCopyKey}
+                    style={{ fontSize: 12, padding: '6px 12px' }}
+                  >
+                    📋 Copy Key
+                  </button>
+                  {cloudSyncStatus === 'connected' && (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={manualCloudSync}
+                      style={{ fontSize: 12, padding: '6px 12px' }}
+                    >
+                      🔄 Sync Now
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Pair With Another Device Form */}
+              <form onSubmit={handlePair} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Enter Pairing Key from your other device (e.g. MIND-XXXX)"
+                  value={targetPairKey}
+                  onChange={e => setTargetPairKey(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: 260,
+                    padding: '9px 12px',
+                    borderRadius: 8,
+                    background: 'var(--surface-raised)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    fontSize: 13
+                  }}
+                />
+                <button
+                  type="submit"
+                  className="primary"
+                  disabled={isPairingLoading || !targetPairKey.trim()}
+                  style={{ fontSize: 13, minHeight: 38 }}
+                >
+                  {isPairingLoading ? 'Pairing...' : '🔗 Pair & Link Devices'}
+                </button>
+              </form>
+
+              {/* Collapsible Supabase Project Setup */}
+              <div style={{ borderTop: '1px dashed #2d2b38', paddingTop: 12 }}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setShowCloudConfig(!showCloudConfig)}
+                  style={{ fontSize: 12, padding: '4px 10px', minHeight: 30 }}
+                >
+                  {showCloudConfig ? '▲ Hide Cloud Server Config' : '⚙ Free Supabase Cloud Configuration (Click to configure)'}
+                </button>
+
+                {showCloudConfig && (
+                  <form onSubmit={handleSaveCloudConfig} style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
+                      Connect your 100% free Supabase project to enable cloud sync. Enter your project API credentials below:
+                    </p>
+                    <div>
+                      <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+                        Supabase Project URL
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://xyzcompany.supabase.co"
+                        value={supabaseUrl}
+                        onChange={e => setSupabaseUrl(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: 6,
+                          background: 'var(--surface-raised)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--text)',
+                          fontSize: 13
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+                        Supabase Anon / Public Key
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                        value={supabaseAnonKey}
+                        onChange={e => setSupabaseAnonKey(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: 6,
+                          background: 'var(--surface-raised)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--text)',
+                          fontSize: 13
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <button type="submit" className="primary" style={{ fontSize: 12, padding: '7px 14px' }}>
+                        Save & Connect Cloud
+                      </button>
+                      {cloudSyncStatus !== 'disabled' && (
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={disconnectCloudSync}
+                          style={{ fontSize: 12, padding: '7px 14px' }}
+                        >
+                          Disconnect Cloud
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Windows Native Desktop Storage Indicator */}
         {window.electronAPI?.isElectron && (
           <div className="overview-panel" style={{ border: '1px solid #4a3e66', background: '#13111c' }}>
