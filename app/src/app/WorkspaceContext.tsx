@@ -22,12 +22,13 @@ import { getTodayDate } from '../domain/dates';
 import { moveItemDirection, normalizeOrder, reorderItems } from '../domain/ordering';
 import { deriveStatusFromSubtasks, getTaskBlockerInfo } from '../domain/readiness';
 import { wouldIntroduceCycle } from '../domain/cycles';
-import { mergeWorkspaces } from '../storage/merge';
+import { deduplicateWorkspace, mergeWorkspaces } from '../storage/merge';
 import { repository, Repository } from '../storage/repository';
 import { getSampleWorkspace, createEmptyWorkspace } from '../storage/sampleData';
 import {
   clearSupabaseConfig,
   fetchFromCloud,
+  fetchRemoteRevision,
   getSupabaseConfig,
   saveSupabaseConfig,
   subscribeToCloudChanges,
@@ -144,7 +145,7 @@ const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [workspace, setWorkspace] = useState<Workspace>(() => {
     const loaded = repository.loadWorkspace();
-    return loaded.workspace;
+    return deduplicateWorkspace(loaded.workspace);
   });
 
   const [revision, setRevision] = useState<number>(() => {
@@ -288,7 +289,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, []);
 
-  // Realtime cloud synchronization
+  // Realtime cloud synchronization, window resume sync, and heartbeat poll
   useEffect(() => {
     const cfg = getSupabaseConfig();
     if (!cfg.url || !cfg.anonKey || !cfg.syncKey) {
@@ -297,18 +298,71 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
 
     setCloudStatus('connected');
+
+    const syncWithRemote = async (silent = false) => {
+      try {
+        const remote = await fetchFromCloud(cfg.syncKey);
+        if (remote.success && remote.workspace && remote.revision !== undefined) {
+          if (remote.revision > currentRevisionRef.current) {
+            const cleanWs = deduplicateWorkspace(remote.workspace);
+            currentRevisionRef.current = remote.revision;
+            setRevision(remote.revision);
+            setWorkspace(cleanWs);
+            repository.saveWorkspace(cleanWs, remote.revision);
+            if (!silent) showToast('Synced update from paired device');
+          } else if (currentRevisionRef.current > remote.revision) {
+            // Local is ahead, push up to remote
+            await uploadToCloud(cfg.syncKey, currentWorkspaceRef.current, currentRevisionRef.current);
+          }
+        }
+      } catch (err) {
+        console.warn('[Sync] Sync check error:', err);
+      }
+    };
+
+    // 1. Initial startup sync check
+    syncWithRemote(true);
+
+    // 2. Realtime WebSocket subscription
     const unsubscribe = subscribeToCloudChanges(cfg.syncKey, (remoteWs, remoteRev) => {
       if (remoteRev > currentRevisionRef.current) {
+        const cleanWs = deduplicateWorkspace(remoteWs);
         currentRevisionRef.current = remoteRev;
         setRevision(remoteRev);
-        setWorkspace(remoteWs);
-        repository.saveWorkspace(remoteWs, remoteRev);
+        setWorkspace(cleanWs);
+        repository.saveWorkspace(cleanWs, remoteRev);
         showToast('Synced update from paired device');
       }
     });
 
+    // 3. Focus / Visibility change hook (critical for mobile app wake & desktop window switches)
+    const handleActive = () => {
+      if (document.visibilityState === 'visible') {
+        fetchRemoteRevision(cfg.syncKey).then(revCheck => {
+          if (revCheck.success && revCheck.revision !== undefined && revCheck.revision > currentRevisionRef.current) {
+            syncWithRemote(false);
+          }
+        });
+      }
+    };
+
+    window.addEventListener('focus', handleActive);
+    document.addEventListener('visibilitychange', handleActive);
+
+    // 4. Heartbeat poll every 10 seconds (lightweight revision check)
+    const intervalId = window.setInterval(() => {
+      fetchRemoteRevision(cfg.syncKey).then(revCheck => {
+        if (revCheck.success && revCheck.revision !== undefined && revCheck.revision > currentRevisionRef.current) {
+          syncWithRemote(false);
+        }
+      });
+    }, 10000);
+
     return () => {
       unsubscribe();
+      window.removeEventListener('focus', handleActive);
+      document.removeEventListener('visibilitychange', handleActive);
+      window.clearInterval(intervalId);
     };
   }, [syncKey, showToast]);
 
@@ -361,29 +415,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const remote = await fetchFromCloud(cleanKey);
       if (remote.success && remote.workspace && remote.revision !== undefined) {
-        const localBuilds = currentWorkspaceRef.current.builds;
-        const remoteBuilds = remote.workspace.builds;
-
-        let finalWorkspace = remote.workspace;
-        let finalRev = remote.revision;
-
-        // If local device has builds, smartly preserve/merge them so nothing is lost
-        if (localBuilds.length > 0) {
-          if (remoteBuilds.length === 0) {
-            finalWorkspace = currentWorkspaceRef.current;
-            finalRev = Math.max(remote.revision, currentRevisionRef.current) + 1;
-            uploadToCloud(cleanKey, finalWorkspace, finalRev);
-          } else {
-            finalWorkspace = mergeWorkspaces(currentWorkspaceRef.current, remote.workspace);
-            finalRev = Math.max(remote.revision, currentRevisionRef.current) + 1;
-            uploadToCloud(cleanKey, finalWorkspace, finalRev);
-          }
-        }
-
-        currentRevisionRef.current = finalRev;
-        setRevision(finalRev);
-        setWorkspace(finalWorkspace);
-        repository.saveWorkspace(finalWorkspace, finalRev);
+        const cleanRemote = deduplicateWorkspace(remote.workspace);
+        currentRevisionRef.current = remote.revision;
+        setRevision(remote.revision);
+        setWorkspace(cleanRemote);
+        repository.saveWorkspace(cleanRemote, remote.revision);
         setCloudStatus('connected');
         showToast(`Paired with ${cleanKey}! Workspace synced.`);
         return true;
@@ -393,7 +429,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const rev = currentRevisionRef.current + 1;
           currentRevisionRef.current = rev;
           setRevision(rev);
-          uploadToCloud(cleanKey, currentWorkspaceRef.current, rev);
+          await uploadToCloud(cleanKey, currentWorkspaceRef.current, rev);
           setCloudStatus('connected');
           showToast(`Paired with ${cleanKey}! Workspace uploaded to cloud.`);
           return true;
@@ -441,10 +477,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const remote = await fetchFromCloud(cfg.syncKey);
     if (remote.success && remote.workspace && remote.revision) {
       if (remote.revision > currentRevisionRef.current) {
+        const cleanWs = deduplicateWorkspace(remote.workspace);
         currentRevisionRef.current = remote.revision;
         setRevision(remote.revision);
-        setWorkspace(remote.workspace);
-        repository.saveWorkspace(remote.workspace, remote.revision);
+        setWorkspace(cleanWs);
+        repository.saveWorkspace(cleanWs, remote.revision);
         setCloudStatus('connected');
         showToast('Pulled latest updates from cloud.');
         return true;
@@ -1552,7 +1589,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const reloadFromStorage = useCallback(() => {
     const loaded = repository.loadWorkspace();
-    setWorkspace(loaded.workspace);
+    const cleanWs = deduplicateWorkspace(loaded.workspace);
+    setWorkspace(cleanWs);
     setRevision(loaded.revision);
     setIsCorrupt(loaded.isCorrupt);
     setRawCorruptData(loaded.rawCorruptData || null);

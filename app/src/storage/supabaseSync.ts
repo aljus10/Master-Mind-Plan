@@ -1,6 +1,11 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Workspace } from '../domain/types';
 
+export const DEFAULT_SUPABASE_URL = 'https://krcpihmfabjoezgthyhe.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3BpaG1mYWJqb2V6Z3RoeWhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2NzEzNzMsImV4cCI6MjEwNTI0NzM3M30.0IMF7mD-AxQBiy25Woq1CpRHXF76JlHReMA8ZABAyaE';
+export const DEFAULT_SYNC_KEY = 'MIND-5UEF';
+
 export const SYNC_STORAGE_KEYS = {
   SUPABASE_URL: 'future-build-organizer:supabase-url',
   SUPABASE_ANON_KEY: 'future-build-organizer:supabase-anon-key',
@@ -13,27 +18,33 @@ let currentUrl: string = '';
 let currentKey: string = '';
 
 /**
- * Retrieves the current Supabase configuration from local settings or env vars.
+ * Retrieves the current Supabase configuration from local settings or env vars,
+ * falling back to preconfigured defaults so no manual key entry is required.
  */
 export function getSupabaseConfig(): { url: string; anonKey: string; syncKey: string } {
-  const url =
+  let url =
     (typeof localStorage !== 'undefined' ? localStorage.getItem(SYNC_STORAGE_KEYS.SUPABASE_URL) : '') ||
     import.meta.env.VITE_SUPABASE_URL ||
-    '';
-  const anonKey =
+    DEFAULT_SUPABASE_URL;
+
+  let anonKey =
     (typeof localStorage !== 'undefined' ? localStorage.getItem(SYNC_STORAGE_KEYS.SUPABASE_ANON_KEY) : '') ||
     import.meta.env.VITE_SUPABASE_ANON_KEY ||
-    '';
-  let syncKey = (typeof localStorage !== 'undefined' ? localStorage.getItem(SYNC_STORAGE_KEYS.SYNC_KEY) : '') || '';
+    DEFAULT_SUPABASE_ANON_KEY;
 
-  if (!syncKey && typeof localStorage !== 'undefined') {
-    // Generate an 8-character pairing key e.g. MIND-8F3A
-    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
-    syncKey = `MIND-${randomHex}`;
-    localStorage.setItem(SYNC_STORAGE_KEYS.SYNC_KEY, syncKey);
+  let syncKey =
+    (typeof localStorage !== 'undefined' ? localStorage.getItem(SYNC_STORAGE_KEYS.SYNC_KEY) : '') ||
+    DEFAULT_SYNC_KEY;
+
+  // Auto-heal legacy or collided test keys to canonical key
+  if (syncKey === 'MIND-D0CJ' || !syncKey) {
+    syncKey = DEFAULT_SYNC_KEY;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SYNC_STORAGE_KEYS.SYNC_KEY, syncKey);
+    }
   }
 
-  return { url: url.trim(), anonKey: anonKey.trim(), syncKey: syncKey.trim() };
+  return { url: url.trim(), anonKey: anonKey.trim(), syncKey: syncKey.trim().toUpperCase() };
 }
 
 /**
@@ -51,12 +62,13 @@ export function saveSupabaseConfig(url: string, anonKey: string, syncKey?: strin
 }
 
 /**
- * Clears cloud sync configuration.
+ * Clears cloud sync configuration (reverts to default keys).
  */
 export function clearSupabaseConfig(): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.removeItem(SYNC_STORAGE_KEYS.SUPABASE_URL);
   localStorage.removeItem(SYNC_STORAGE_KEYS.SUPABASE_ANON_KEY);
+  localStorage.removeItem(SYNC_STORAGE_KEYS.SYNC_KEY);
   clientInstance = null;
 }
 
@@ -123,6 +135,37 @@ export async function uploadToCloud(
 }
 
 /**
+ * Lightweight check to retrieve only the remote revision number without transferring workspace data.
+ */
+export async function fetchRemoteRevision(
+  syncKey: string
+): Promise<{ success: boolean; revision?: number; error?: string }> {
+  const supabase = getSupabaseClient();
+  if (!supabase || !syncKey) {
+    return { success: false, error: 'Cloud sync not configured' };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('workspaces')
+      .select('revision')
+      .eq('sync_key', syncKey.trim().toUpperCase())
+      .maybeSingle();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    if (!data) {
+      return { success: false, error: 'No remote workspace found' };
+    }
+
+    return { success: true, revision: data.revision as number };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
+/**
  * Fetches the latest remote workspace payload from Supabase.
  */
 export async function fetchFromCloud(
@@ -180,9 +223,18 @@ export function subscribeToCloudChanges(
         filter: `sync_key=eq.${cleanKey}`
       },
       payload => {
-        const row = payload.new as { workspace_data: Workspace; revision: number } | undefined;
-        if (row && row.workspace_data) {
-          onRemoteChange(row.workspace_data, row.revision);
+        const row = payload.new as { workspace_data?: Workspace; revision?: number } | undefined;
+        if (row && row.revision !== undefined) {
+          if (row.workspace_data) {
+            onRemoteChange(row.workspace_data, row.revision);
+          } else {
+            // If postgres TOAST omitted large json in the realtime packet, fetch full payload
+            fetchFromCloud(cleanKey).then(res => {
+              if (res.success && res.workspace && res.revision !== undefined) {
+                onRemoteChange(res.workspace, res.revision);
+              }
+            });
+          }
         }
       }
     )
