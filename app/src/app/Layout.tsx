@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useWorkspace } from './WorkspaceContext';
 import { Toast } from '../components/Toast';
 import { CorruptRecoveryModal } from '../components/CorruptRecoveryModal';
+import { getTodayDate } from '../domain/dates';
 
 export const Layout: React.FC = () => {
   const {
@@ -18,6 +19,10 @@ export const Layout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const todayDate = getTodayDate();
+  const todayTodos = workspace.dailyTodos || [];
+  const todayPendingCount = todayTodos.filter(t => t.date === todayDate && !t.completed).length;
+
   const activeBuildsCount = workspace.builds.filter(b => !b.archivedAt).length;
   const archivedBuildsCount = workspace.builds.filter(b => !!b.archivedAt).length;
   const pinnedBuilds = workspace.builds.filter(b => b.pinned && !b.archivedAt);
@@ -25,7 +30,10 @@ export const Layout: React.FC = () => {
   // Breadcrumbs
   const getBreadcrumb = () => {
     const parts = location.pathname.split('/').filter(Boolean);
-    if (parts.length === 0 || parts[0] === 'builds') {
+    if (parts.length === 0 || parts[0] === 'today') {
+      return <span style={{ color: 'var(--text)', fontWeight: 500 }}>Daily Focus (Today)</span>;
+    }
+    if (parts[0] === 'builds') {
       if (parts.length >= 2) {
         const build = workspace.builds.find(b => b.id === parts[1]);
         return (
@@ -74,6 +82,13 @@ export const Layout: React.FC = () => {
       {/* Mobile drawer nav */}
       {mobileMenuOpen && (
         <nav className="mobile-nav" aria-label="Mobile Navigation">
+          <NavLink
+            to="/today"
+            className={({ isActive }) => (isActive ? 'active' : '')}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Today {todayPendingCount > 0 ? `(${todayPendingCount})` : ''}
+          </NavLink>
           <NavLink
             to="/builds"
             className={({ isActive }) => (isActive ? 'active' : '')}
@@ -139,12 +154,27 @@ export const Layout: React.FC = () => {
         <aside className="sidebar" aria-label="Sidebar Navigation">
           <div className="brand">
             <span className="brand-mark">↗</span>
-            Future Builds
+            Master Mind Plan
           </div>
 
           <div className="workspace-label">YOUR WORKSPACE</div>
 
           <nav aria-label="Main Navigation">
+            <NavLink
+              to="/today"
+              className={({ isActive }) => `nav ${isActive ? 'active' : ''}`}
+            >
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+                <path d="m9 16 2 2 4-4" />
+              </svg>
+              Today
+              {todayPendingCount > 0 && <span className="count">{todayPendingCount}</span>}
+            </NavLink>
+
             <NavLink
               to="/builds"
               className={({ isActive }) => `nav ${isActive ? 'active' : ''}`}
@@ -257,6 +287,23 @@ export const Layout: React.FC = () => {
       {/* Persistent Mobile Bottom Navigation Bar */}
       <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
         <NavLink
+          to="/today"
+          className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
+        >
+          <div className="mobile-tab-icon-wrapper">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+              <path d="m9 16 2 2 4-4" />
+            </svg>
+            {todayPendingCount > 0 && <span className="mobile-tab-dot" />}
+          </div>
+          <span>Today</span>
+        </NavLink>
+
+        <NavLink
           to="/builds"
           className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
         >
@@ -289,17 +336,6 @@ export const Layout: React.FC = () => {
             <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1" />
           </svg>
           <span>Settings</span>
-        </NavLink>
-
-        <NavLink
-          to="/archive"
-          className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
-        >
-          <svg viewBox="0 0 24 24">
-            <rect x="3" y="3" width="18" height="4" rx="1" />
-            <path d="M5 7v14h14V7M10 11h4" />
-          </svg>
-          <span>Archive</span>
         </NavLink>
       </nav>
 

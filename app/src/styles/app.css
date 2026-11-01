@@ -1752,6 +1752,764 @@ svg {
   color: var(--accent);
 }
 
+/* ==========================================================================
+   Daily Focus / Daily To-Do Feature Styles
+   ========================================================================== */
+
+.daily-todo-page {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.daily-todo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 4px;
+}
+
+.daily-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.daily-page-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0;
+  color: var(--text);
+}
+
+.daily-page-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Date Switcher */
+.daily-date-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.daily-date-controls {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.daily-date-nav-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: var(--secondary);
+  transition: background 120ms ease-out, color 120ms ease-out;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.daily-date-nav-btn:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.daily-date-nav-btn:active {
+  transform: scale(0.96);
+  transition: transform 150ms ease-out;
+}
+
+.daily-date-nav-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.daily-date-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.daily-date-relative {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(181, 161, 255, 0.14);
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.3px;
+}
+
+.daily-date-main {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.daily-date-picker-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.daily-today-jump-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border: 1px solid #4a3e63;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: background 150ms ease-out;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.daily-today-jump-btn:active {
+  transform: scale(0.96);
+  transition: transform 150ms ease-out;
+}
+
+/* Day Progress Section */
+.daily-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #111016;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.daily-progress-bar-track {
+  width: 100%;
+  height: 6px;
+  background: #201f28;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.daily-progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 250ms ease-out, background 250ms ease-out;
+}
+
+.daily-progress-bar-fill.complete {
+  background: var(--success);
+}
+
+.daily-progress-text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+.daily-celebration-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--success);
+  background: var(--success-bg);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--success-border);
+}
+
+/* Quick Add Bar */
+.quick-add-bar {
+  width: 100%;
+}
+
+.quick-add-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.quick-add-inner:focus-within {
+  border-color: #6d5b99;
+  box-shadow: 0 0 0 1px #6d5b99;
+}
+
+.quick-add-icon-col {
+  padding-top: 3px;
+  color: var(--accent);
+}
+
+.quick-add-plus-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.quick-add-input-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-add-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  padding: 0;
+  min-height: 24px;
+}
+
+.quick-add-textarea::placeholder {
+  color: var(--muted);
+}
+
+.quick-add-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.quick-add-build-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.picker-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.quick-add-build-select {
+  background: #17161f;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  max-width: 220px;
+}
+
+.quick-add-build-select.compact {
+  max-width: 150px;
+  font-size: 11px;
+}
+
+.quick-add-yap-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #c7b6ff;
+  background: #292238;
+  border: 1px solid #4a3e63;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.quick-add-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.quick-add-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.quick-add-trailing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-add-submit-btn {
+  background: var(--accent);
+  color: #0d0b13;
+  font-weight: 650;
+  font-size: 12px;
+  border-radius: 7px;
+  padding: 6px 14px;
+  min-height: 32px;
+  transition: opacity 150ms ease-out;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.quick-add-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.quick-add-submit-btn:not(:disabled):active {
+  transform: scale(0.96);
+  transition: transform 150ms ease-out;
+}
+
+/* Daily Tasks List */
+.daily-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daily-todo-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: border-color 150ms ease-out, background 150ms ease-out, opacity 150ms ease-out;
+}
+
+.daily-todo-item:hover {
+  border-color: #3f3d4d;
+}
+
+.daily-todo-item.completed {
+  opacity: 0.65;
+  background: #100f14;
+}
+
+.daily-todo-main-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/* Optical Checkbox */
+.daily-checkbox-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 1px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.daily-checkbox-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.daily-checkbox-visual {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid #504d60;
+  background: #14131a;
+  display: grid;
+  place-items: center;
+  transition: border-color 150ms ease-out, background 150ms ease-out;
+}
+
+.daily-checkbox-container:hover .daily-checkbox-visual {
+  border-color: var(--accent);
+}
+
+.daily-checkbox-input:checked + .daily-checkbox-visual {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.daily-checkbox-check {
+  width: 12px;
+  height: 12px;
+  stroke: #0d0c13;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+
+.daily-checkbox-input:checked + .daily-checkbox-visual .daily-checkbox-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Content Area */
+.daily-todo-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.daily-todo-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.45;
+  cursor: pointer;
+  word-break: break-word;
+}
+
+.completed .daily-todo-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.daily-todo-title-edit {
+  width: 100%;
+  background: #16151f;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.daily-todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.daily-meta-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 5px;
+  letter-spacing: 0.2px;
+}
+
+.daily-meta-badge.build-badge {
+  background: #1e1c29;
+  color: #cbb8ff;
+  border: 1px solid #3d3550;
+  cursor: pointer;
+}
+
+.daily-meta-badge.rolled-badge {
+  background: #2b2316;
+  color: #f2cb7b;
+  border: 1px solid #4e3f22;
+}
+
+.daily-meta-badge.completed-badge {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.daily-notes-toggle,
+.daily-notes-add-btn {
+  font-size: 11px;
+  color: var(--secondary);
+  background: #181720;
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: color 120ms ease-out, background 120ms ease-out;
+}
+
+.daily-notes-toggle.open {
+  background: #252230;
+  color: var(--accent);
+  border-color: #483e60;
+}
+
+.daily-todo-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.daily-action-btn {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #181720;
+  border: 1px solid var(--border);
+  color: var(--secondary);
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.daily-action-btn:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.daily-action-btn:active {
+  transform: scale(0.96);
+  transition: transform 150ms ease-out;
+}
+
+.daily-action-btn.icon-only {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.daily-action-btn.icon-only svg {
+  width: 14px;
+  height: 14px;
+}
+
+.daily-action-btn.icon-only.delete:hover {
+  color: var(--error);
+  border-color: var(--error-border);
+}
+
+.daily-date-picker-wrapper {
+  position: relative;
+}
+
+.daily-inline-date-input {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 50;
+  background: #1a1924;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px;
+  font-size: 12px;
+}
+
+.daily-todo-notes-drawer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #1f1e29;
+}
+
+.daily-notes-textarea {
+  width: 100%;
+  background: #131219;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.daily-notes-textarea:focus {
+  border-color: #5d4d80;
+}
+
+/* Empty State */
+.daily-empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #100f15;
+}
+
+.daily-empty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1c1a27;
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+}
+
+.daily-empty-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.daily-empty-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.daily-empty-desc {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 420px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+/* Upcoming Tasks Accordion */
+.daily-upcoming-section {
+  margin-top: 10px;
+}
+
+.daily-upcoming-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #121118;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: border-color 150ms ease-out;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.daily-upcoming-toggle:hover {
+  border-color: #3e3a4e;
+}
+
+.daily-upcoming-toggle:active {
+  transform: scale(0.99);
+  transition: transform 150ms ease-out;
+}
+
+.daily-upcoming-toggle-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.daily-chevron {
+  width: 16px;
+  height: 16px;
+  stroke: var(--secondary);
+  transition: transform 180ms ease-out;
+}
+
+.daily-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.daily-upcoming-preview-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.daily-upcoming-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.daily-upcoming-group {
+  background: #0f0e15;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.daily-upcoming-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.group-date {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.group-jump-btn {
+  font-size: 11px;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+
+.daily-upcoming-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Mobile Tab Badge Dot */
+.mobile-tab-icon-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.mobile-tab-dot {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 5px var(--accent);
+}
+
+@media (max-width: 700px) {
+  .daily-todo-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .daily-date-switcher {
+    justify-content: space-between;
+  }
+  .quick-add-inner {
+    padding: 10px 12px;
+  }
+  .daily-todo-item {
+    padding: 10px 12px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

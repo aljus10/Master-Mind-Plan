@@ -2,11 +2,23 @@ import starterJson from '../assets/starter-data.json';
 import { Backup, Workspace } from '../domain/types';
 
 export function getSampleBackup(): Backup {
-  return starterJson as Backup;
+  const backup = (starterJson as unknown) as Backup;
+  if (!backup.workspace.dailyTodos) {
+    backup.workspace.dailyTodos = [];
+  }
+  if (!backup.workspace.deletedIds) {
+    backup.workspace.deletedIds = {};
+  }
+  return backup;
 }
 
 export function getSampleWorkspace(): Workspace {
-  return (starterJson as Backup).workspace;
+  const ws = ((starterJson as unknown) as Backup).workspace;
+  return {
+    ...ws,
+    dailyTodos: ws.dailyTodos || [],
+    deletedIds: ws.deletedIds || {}
+  };
 }
 
 export function createEmptyWorkspace(): Workspace {
@@ -18,8 +30,10 @@ export function createEmptyWorkspace(): Workspace {
     features: [],
     notes: [],
     reviews: [],
+    dailyTodos: [],
+    deletedIds: {},
     preferences: {
-      startArea: 'builds',
+      startArea: 'today',
       buildsView: 'board'
     }
   };

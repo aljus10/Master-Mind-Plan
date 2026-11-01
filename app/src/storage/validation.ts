@@ -21,6 +21,7 @@ export interface ValidationResult {
     featuresCount: number;
     notesCount: number;
     reviewsCount: number;
+    dailyTodosCount: number;
   };
 }
 
@@ -68,6 +69,14 @@ export function validateBackupJson(rawJson: string): ValidationResult {
     if (!Array.isArray(ws[arrName])) {
       errors.push(`Workspace must contain array "${arrName}".`);
     }
+  }
+
+  if (ws.dailyTodos !== undefined && !Array.isArray(ws.dailyTodos)) {
+    errors.push('Workspace dailyTodos must be an array when provided.');
+  }
+
+  if (ws.deletedIds !== undefined && (typeof ws.deletedIds !== 'object' || ws.deletedIds === null)) {
+    errors.push('Workspace deletedIds must be an object map when provided.');
   }
 
   if (errors.length > 0) {
@@ -259,6 +268,32 @@ export function validateBackupJson(rawJson: string): ValidationResult {
     }
   }
 
+  // Validate Daily Todos
+  const todoIdSet = new Set<string>();
+  if (workspace.dailyTodos && Array.isArray(workspace.dailyTodos)) {
+    for (const todo of workspace.dailyTodos) {
+      if (!todo.id || typeof todo.id !== 'string') {
+        errors.push('Every daily todo must have a valid string id.');
+      } else if (todoIdSet.has(todo.id)) {
+        errors.push(`Duplicate daily todo id: "${todo.id}".`);
+      } else {
+        todoIdSet.add(todo.id);
+      }
+
+      if (!todo.title || typeof todo.title !== 'string') {
+        errors.push(`Daily todo "${todo.id || 'unknown'}" is missing required title.`);
+      }
+
+      if (todo.date && !CALENDAR_DATE_REGEX.test(todo.date)) {
+        errors.push(`Daily todo "${todo.title}" has invalid date format: "${todo.date}".`);
+      }
+
+      if (todo.buildId && !buildIdSet.has(todo.buildId)) {
+        errors.push(`Daily todo "${todo.title}" references non-existent buildId: "${todo.buildId}".`);
+      }
+    }
+  }
+
   if (errors.length > 0) {
     return { valid: false, errors };
   }
@@ -275,7 +310,9 @@ export function validateBackupJson(rawJson: string): ValidationResult {
       features: workspace.features || [],
       notes: workspace.notes || [],
       reviews: workspace.reviews || [],
-      preferences: workspace.preferences || { startArea: 'builds', buildsView: 'board' }
+      dailyTodos: Array.isArray(workspace.dailyTodos) ? workspace.dailyTodos : [],
+      deletedIds: (workspace.deletedIds && typeof workspace.deletedIds === 'object') ? workspace.deletedIds : {},
+      preferences: workspace.preferences || { startArea: 'today', buildsView: 'board' }
     }
   };
 
@@ -290,7 +327,8 @@ export function validateBackupJson(rawJson: string): ValidationResult {
       ideasCount: validBackup.workspace.ideas.length,
       featuresCount: validBackup.workspace.features.length,
       notesCount: validBackup.workspace.notes.length,
-      reviewsCount: validBackup.workspace.reviews.length
+      reviewsCount: validBackup.workspace.reviews.length,
+      dailyTodosCount: validBackup.workspace.dailyTodos.length
     }
   };
 }

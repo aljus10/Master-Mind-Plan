@@ -4,6 +4,7 @@ import {
   Build,
   BuildStatus,
   CalendarDate,
+  DailyTodo,
   Feature,
   Id,
   Idea,
@@ -22,6 +23,7 @@ import { getTodayDate } from '../domain/dates';
 import { moveItemDirection, normalizeOrder, reorderItems } from '../domain/ordering';
 import { deriveStatusFromSubtasks, getTaskBlockerInfo } from '../domain/readiness';
 import { wouldIntroduceCycle } from '../domain/cycles';
+import { isRolloverNeeded, rolloverUnfinishedTodos } from '../domain/rollover';
 import { deduplicateWorkspace, mergeWorkspaces } from '../storage/merge';
 import { repository, Repository } from '../storage/repository';
 import { getSampleWorkspace, createEmptyWorkspace } from '../storage/sampleData';
@@ -61,6 +63,15 @@ interface WorkspaceContextType {
 
   // Global preferences
   updatePreferences: (prefs: Partial<UserPreferences>) => void;
+
+  // Daily To-Do actions
+  addDailyTodo: (title: string, date?: CalendarDate, notes?: string, buildId?: Id | null) => DailyTodo;
+  addDailyTodosBatch: (items: Array<{ title: string; date?: CalendarDate; notes?: string; buildId?: Id | null }>) => DailyTodo[];
+  updateDailyTodo: (todoId: Id, updates: Partial<DailyTodo>) => void;
+  toggleDailyTodo: (todoId: Id) => void;
+  deleteDailyTodo: (todoId: Id) => void;
+  reorderDailyTodos: (date: CalendarDate, sourceId: Id, targetIndex: number) => void;
+  triggerRollover: () => number;
 
   // Build actions
   addBuild: (title: string, description?: string, category?: string) => Build;
@@ -289,7 +300,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, []);
 
-  // Realtime cloud synchronization, window resume sync, and heartbeat poll
+  // Realtime cloud synchronization and window resume sync (zero-cost event-driven sync)
   useEffect(() => {
     const cfg = getSupabaseConfig();
     if (!cfg.url || !cfg.anonKey || !cfg.syncKey) {
@@ -304,7 +315,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const remote = await fetchFromCloud(cfg.syncKey);
         if (remote.success && remote.workspace && remote.revision !== undefined) {
           if (remote.revision > currentRevisionRef.current) {
-            const cleanWs = deduplicateWorkspace(remote.workspace);
+            const merged = mergeWorkspaces(currentWorkspaceRef.current, remote.workspace);
+            const cleanWs = deduplicateWorkspace(merged);
             currentRevisionRef.current = remote.revision;
             setRevision(remote.revision);
             setWorkspace(cleanWs);
@@ -326,7 +338,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // 2. Realtime WebSocket subscription
     const unsubscribe = subscribeToCloudChanges(cfg.syncKey, (remoteWs, remoteRev) => {
       if (remoteRev > currentRevisionRef.current) {
-        const cleanWs = deduplicateWorkspace(remoteWs);
+        const merged = mergeWorkspaces(currentWorkspaceRef.current, remoteWs);
+        const cleanWs = deduplicateWorkspace(merged);
         currentRevisionRef.current = remoteRev;
         setRevision(remoteRev);
         setWorkspace(cleanWs);
@@ -335,7 +348,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     });
 
-    // 3. Focus / Visibility change hook (critical for mobile app wake & desktop window switches)
+    // 3. Focus / Visibility change hook (for mobile app wake & window focus)
     const handleActive = () => {
       if (document.visibilityState === 'visible') {
         fetchRemoteRevision(cfg.syncKey).then(revCheck => {
@@ -349,20 +362,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     window.addEventListener('focus', handleActive);
     document.addEventListener('visibilitychange', handleActive);
 
-    // 4. Heartbeat poll every 10 seconds (lightweight revision check)
-    const intervalId = window.setInterval(() => {
-      fetchRemoteRevision(cfg.syncKey).then(revCheck => {
-        if (revCheck.success && revCheck.revision !== undefined && revCheck.revision > currentRevisionRef.current) {
-          syncWithRemote(false);
-        }
-      });
-    }, 10000);
-
     return () => {
       unsubscribe();
       window.removeEventListener('focus', handleActive);
       document.removeEventListener('visibilitychange', handleActive);
-      window.clearInterval(intervalId);
     };
   }, [syncKey, showToast]);
 
@@ -507,6 +510,193 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ...ws,
       preferences: { ...ws.preferences, ...prefs }
     }), true);
+  }, [applyWorkspaceMutation]);
+
+  // Rollover trigger
+  const triggerRollover = useCallback((): number => {
+    const today = getTodayDate();
+    let count = 0;
+    applyWorkspaceMutation(ws => {
+      if (!isRolloverNeeded(ws.dailyTodos || [], today)) {
+        return ws;
+      }
+      const result = rolloverUnfinishedTodos(ws.dailyTodos || [], today);
+      count = result.rolledCount;
+      if (result.rolledCount > 0) {
+        return {
+          ...ws,
+          dailyTodos: result.todos
+        };
+      }
+      return ws;
+    }, true);
+
+    if (count > 0) {
+      showToast(`Rolled over ${count} unfinished task${count > 1 ? 's' : ''} to Today`);
+    }
+    return count;
+  }, [applyWorkspaceMutation, showToast]);
+
+  // Check and run rollover on mount
+  useEffect(() => {
+    triggerRollover();
+  }, [triggerRollover]);
+
+  // Midnight watcher: schedules timer to 00:00:01 local time every day
+  useEffect(() => {
+    let timerId: number | null = null;
+    const scheduleNextMidnight = () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+      const msUntilMidnight = tomorrow.getTime() - now.getTime();
+      timerId = window.setTimeout(() => {
+        triggerRollover();
+        scheduleNextMidnight();
+      }, msUntilMidnight);
+    };
+
+    scheduleNextMidnight();
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [triggerRollover]);
+
+  // Daily To-Do actions
+  const addDailyTodo = useCallback(
+    (title: string, date?: CalendarDate, notes = '', buildId: Id | null = null): DailyTodo => {
+      const id = generateId('tod');
+      const now = nowISO();
+      const targetDate = date || getTodayDate();
+      const existingForDate = (currentWorkspaceRef.current.dailyTodos || []).filter(t => t.date === targetDate);
+
+      const newTodo: DailyTodo = {
+        id,
+        title: title.trim(),
+        notes: notes.trim(),
+        completed: false,
+        completedAt: null,
+        date: targetDate,
+        order: existingForDate.length,
+        rolledFromDate: null,
+        buildId: buildId || null,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      applyWorkspaceMutation(ws => ({
+        ...ws,
+        dailyTodos: [...(ws.dailyTodos || []), newTodo]
+      }), true);
+
+      showToast(`Task added to ${targetDate === getTodayDate() ? 'Today' : targetDate}`);
+      return newTodo;
+    },
+    [applyWorkspaceMutation, showToast]
+  );
+
+  const addDailyTodosBatch = useCallback(
+    (items: Array<{ title: string; date?: CalendarDate; notes?: string; buildId?: Id | null }>): DailyTodo[] => {
+      if (items.length === 0) return [];
+      const now = nowISO();
+      const today = getTodayDate();
+      const created: DailyTodo[] = [];
+
+      applyWorkspaceMutation(ws => {
+        let currentTodos = [...(ws.dailyTodos || [])];
+        for (const item of items) {
+          const id = generateId('tod');
+          const targetDate = item.date || today;
+          const countOnDate = currentTodos.filter(t => t.date === targetDate).length;
+          const newTodo: DailyTodo = {
+            id,
+            title: item.title.trim(),
+            notes: (item.notes || '').trim(),
+            completed: false,
+            completedAt: null,
+            date: targetDate,
+            order: countOnDate,
+            rolledFromDate: null,
+            buildId: item.buildId || null,
+            createdAt: now,
+            updatedAt: now
+          };
+          created.push(newTodo);
+          currentTodos.push(newTodo);
+        }
+        return {
+          ...ws,
+          dailyTodos: currentTodos
+        };
+      }, true);
+
+      showToast(`Added ${created.length} task${created.length > 1 ? 's' : ''}`);
+      return created;
+    },
+    [applyWorkspaceMutation, showToast]
+  );
+
+  const updateDailyTodo = useCallback((todoId: Id, updates: Partial<DailyTodo>) => {
+    applyWorkspaceMutation(ws => ({
+      ...ws,
+      dailyTodos: (ws.dailyTodos || []).map(t =>
+        t.id === todoId ? { ...t, ...updates, updatedAt: nowISO() } : t
+      )
+    }), false);
+  }, [applyWorkspaceMutation]);
+
+  const toggleDailyTodo = useCallback((todoId: Id) => {
+    applyWorkspaceMutation(ws => {
+      const now = nowISO();
+      return {
+        ...ws,
+        dailyTodos: (ws.dailyTodos || []).map(t => {
+          if (t.id === todoId) {
+            const nextCompleted = !t.completed;
+            return {
+              ...t,
+              completed: nextCompleted,
+              completedAt: nextCompleted ? now : null,
+              updatedAt: now
+            };
+          }
+          return t;
+        })
+      };
+    }, true);
+  }, [applyWorkspaceMutation]);
+
+  const deleteDailyTodo = useCallback((todoId: Id) => {
+    const now = nowISO();
+    applyWorkspaceMutation(ws => ({
+      ...ws,
+      dailyTodos: (ws.dailyTodos || []).filter(t => t.id !== todoId),
+      deletedIds: {
+        ...(ws.deletedIds || {}),
+        [todoId]: now
+      }
+    }), true);
+    showToast('Daily task removed.');
+  }, [applyWorkspaceMutation, showToast]);
+
+  const reorderDailyTodos = useCallback((date: CalendarDate, sourceId: Id, targetIndex: number) => {
+    applyWorkspaceMutation(ws => {
+      const dayTodos = (ws.dailyTodos || [])
+        .filter(t => t.date === date)
+        .sort((a, b) => a.order - b.order);
+
+      const reordered = reorderItems(dayTodos, sourceId, targetIndex);
+      const orderMap = new Map(reordered.map((t, idx) => [t.id, idx]));
+
+      return {
+        ...ws,
+        dailyTodos: (ws.dailyTodos || []).map(t => {
+          if (orderMap.has(t.id)) {
+            return { ...t, order: orderMap.get(t.id)!, updatedAt: nowISO() };
+          }
+          return t;
+        })
+      };
+    }, true);
   }, [applyWorkspaceMutation]);
 
   // Build actions
@@ -707,16 +897,42 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [applyWorkspaceMutation, showToast]);
 
   const deleteBuildPermanently = useCallback((buildId: Id) => {
-    applyWorkspaceMutation(ws => ({
-      ...ws,
-      builds: ws.builds.filter(b => b.id !== buildId),
-      milestones: ws.milestones.filter(m => m.buildId !== buildId),
-      tasks: ws.tasks.filter(t => t.buildId !== buildId),
-      ideas: ws.ideas.filter(i => i.buildId !== buildId),
-      features: ws.features.filter(f => f.buildId !== buildId),
-      notes: ws.notes.filter(n => n.buildId !== buildId),
-      reviews: ws.reviews.filter(r => r.buildId !== buildId)
-    }), true);
+    const now = nowISO();
+    applyWorkspaceMutation(ws => {
+      const deletedTaskIds = ws.tasks.filter(t => t.buildId === buildId).map(t => t.id);
+      const deletedMilestoneIds = ws.milestones.filter(m => m.buildId === buildId).map(m => m.id);
+      const deletedIdeaIds = ws.ideas.filter(i => i.buildId === buildId).map(i => i.id);
+      const deletedFeatureIds = ws.features.filter(f => f.buildId === buildId).map(f => f.id);
+      const deletedNoteIds = ws.notes.filter(n => n.buildId === buildId).map(n => n.id);
+      const deletedReviewIds = ws.reviews.filter(r => r.buildId === buildId).map(r => r.id);
+      const deletedTodoIds = (ws.dailyTodos || []).filter(t => t.buildId === buildId).map(t => t.id);
+
+      const newDeletedIds = { ...(ws.deletedIds || {}), [buildId]: now };
+      for (const id of [
+        ...deletedTaskIds,
+        ...deletedMilestoneIds,
+        ...deletedIdeaIds,
+        ...deletedFeatureIds,
+        ...deletedNoteIds,
+        ...deletedReviewIds,
+        ...deletedTodoIds
+      ]) {
+        newDeletedIds[id] = now;
+      }
+
+      return {
+        ...ws,
+        builds: ws.builds.filter(b => b.id !== buildId),
+        milestones: ws.milestones.filter(m => m.buildId !== buildId),
+        tasks: ws.tasks.filter(t => t.buildId !== buildId),
+        ideas: ws.ideas.filter(i => i.buildId !== buildId),
+        features: ws.features.filter(f => f.buildId !== buildId),
+        notes: ws.notes.filter(n => n.buildId !== buildId),
+        reviews: ws.reviews.filter(r => r.buildId !== buildId),
+        dailyTodos: (ws.dailyTodos || []).filter(t => t.buildId !== buildId),
+        deletedIds: newDeletedIds
+      };
+    }, true);
     showToast('Build permanently deleted.');
   }, [applyWorkspaceMutation, showToast]);
 
@@ -800,28 +1016,35 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteMilestone = useCallback(
     (milestoneId: Id, mode: 'move' | 'delete', targetMilestoneId?: Id) => {
+      const now = nowISO();
       applyWorkspaceMutation(ws => {
         let newTasks = ws.tasks;
         let newBuilds = ws.builds;
+        const newDeletedIds = { ...(ws.deletedIds || {}), [milestoneId]: now };
 
         if (mode === 'move' && targetMilestoneId) {
           newTasks = newTasks.map(t =>
-            t.milestoneId === milestoneId ? { ...t, milestoneId: targetMilestoneId, updatedAt: nowISO() } : t
+            t.milestoneId === milestoneId ? { ...t, milestoneId: targetMilestoneId, updatedAt: now } : t
           );
         } else {
           // Delete contained tasks and clean up references
-          const deletedTaskIds = new Set(newTasks.filter(t => t.milestoneId === milestoneId).map(t => t.id));
+          const deletedTaskIds = newTasks.filter(t => t.milestoneId === milestoneId).map(t => t.id);
+          const deletedTaskSet = new Set(deletedTaskIds);
+          for (const tid of deletedTaskIds) {
+            newDeletedIds[tid] = now;
+          }
+
           newTasks = newTasks
-            .filter(t => !deletedTaskIds.has(t.id))
+            .filter(t => !deletedTaskSet.has(t.id))
             .map(t => ({
               ...t,
-              prerequisiteTaskIds: t.prerequisiteTaskIds.filter(pId => !deletedTaskIds.has(pId))
+              prerequisiteTaskIds: t.prerequisiteTaskIds.filter(pId => !deletedTaskSet.has(pId))
             }));
 
           // Clean up nextActions
           newBuilds = newBuilds.map(b => {
-            if (b.nextAction && deletedTaskIds.has(b.nextAction.taskId)) {
-              return { ...b, nextAction: null, updatedAt: nowISO() };
+            if (b.nextAction && deletedTaskSet.has(b.nextAction.taskId)) {
+              return { ...b, nextAction: null, updatedAt: now };
             }
             return b;
           });
@@ -831,7 +1054,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ...ws,
           milestones: ws.milestones.filter(m => m.id !== milestoneId),
           tasks: newTasks,
-          builds: newBuilds
+          builds: newBuilds,
+          deletedIds: newDeletedIds
         };
       }, true);
       showToast('Milestone removed.');
@@ -933,6 +1157,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [applyWorkspaceMutation]);
 
   const deleteTask = useCallback((taskId: Id) => {
+    const now = nowISO();
     applyWorkspaceMutation(ws => {
       const taskToDelete = ws.tasks.find(t => t.id === taskId);
       if (!taskToDelete) return ws;
@@ -948,7 +1173,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Clean up build nextActions
       const newBuilds = ws.builds.map(b => {
         if (b.nextAction?.taskId === taskId) {
-          return { ...b, nextAction: null, updatedAt: nowISO() };
+          return { ...b, nextAction: null, updatedAt: now };
         }
         return b;
       });
@@ -956,7 +1181,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Clean up idea convertedTo
       const newIdeas = ws.ideas.map(i => {
         if (i.convertedTo?.kind === 'task' && i.convertedTo.id === taskId) {
-          return { ...i, convertedTo: null, updatedAt: nowISO() };
+          return { ...i, convertedTo: null, updatedAt: now };
         }
         return i;
       });
@@ -965,7 +1190,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ...ws,
         tasks: newTasks,
         builds: newBuilds,
-        ideas: newIdeas
+        ideas: newIdeas,
+        deletedIds: {
+          ...(ws.deletedIds || {}),
+          [taskId]: now
+        }
       };
     }, true);
     showToast('Task deleted.');
@@ -1299,9 +1528,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [applyWorkspaceMutation, showToast]);
 
   const deleteIdea = useCallback((ideaId: Id) => {
+    const now = nowISO();
     applyWorkspaceMutation(ws => ({
       ...ws,
-      ideas: ws.ideas.filter(i => i.id !== ideaId)
+      ideas: ws.ideas.filter(i => i.id !== ideaId),
+      deletedIds: {
+        ...(ws.deletedIds || {}),
+        [ideaId]: now
+      }
     }), true);
     showToast('Idea removed.');
   }, [applyWorkspaceMutation, showToast]);
@@ -1417,11 +1651,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [applyWorkspaceMutation]);
 
   const deleteFeature = useCallback((featureId: Id) => {
+    const now = nowISO();
     applyWorkspaceMutation(ws => {
       // Clean up idea link
       const newIdeas = ws.ideas.map(i => {
         if (i.convertedTo?.kind === 'feature' && i.convertedTo.id === featureId) {
-          return { ...i, convertedTo: null, updatedAt: nowISO() };
+          return { ...i, convertedTo: null, updatedAt: now };
         }
         return i;
       });
@@ -1429,7 +1664,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return {
         ...ws,
         features: ws.features.filter(f => f.id !== featureId),
-        ideas: newIdeas
+        ideas: newIdeas,
+        deletedIds: {
+          ...(ws.deletedIds || {}),
+          [featureId]: now
+        }
       };
     }, true);
     showToast('Feature removed.');
@@ -1468,9 +1707,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [applyWorkspaceMutation]);
 
   const deleteNote = useCallback((noteId: Id) => {
+    const now = nowISO();
     applyWorkspaceMutation(ws => ({
       ...ws,
-      notes: ws.notes.filter(n => n.id !== noteId)
+      notes: ws.notes.filter(n => n.id !== noteId),
+      deletedIds: {
+        ...(ws.deletedIds || {}),
+        [noteId]: now
+      }
     }), true);
     showToast('Note deleted.');
   }, [applyWorkspaceMutation, showToast]);
@@ -1510,9 +1754,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [applyWorkspaceMutation]);
 
   const deleteReview = useCallback((reviewId: Id) => {
+    const now = nowISO();
     applyWorkspaceMutation(ws => ({
       ...ws,
-      reviews: ws.reviews.filter(r => r.id !== reviewId)
+      reviews: ws.reviews.filter(r => r.id !== reviewId),
+      deletedIds: {
+        ...(ws.deletedIds || {}),
+        [reviewId]: now
+      }
     }), true);
     showToast('Review removed.');
   }, [applyWorkspaceMutation, showToast]);
@@ -1619,6 +1868,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         disconnectCloudSync,
         restorePrePairBackup,
         updatePreferences,
+        addDailyTodo,
+        addDailyTodosBatch,
+        updateDailyTodo,
+        toggleDailyTodo,
+        deleteDailyTodo,
+        reorderDailyTodos,
+        triggerRollover,
         addBuild,
         updateBuild,
         duplicateBuild,

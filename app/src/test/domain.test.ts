@@ -345,6 +345,7 @@ describe('Import & Collision Remapping', () => {
       features: [],
       notes: [],
       reviews: [],
+      dailyTodos: [],
       preferences: { startArea: 'builds', buildsView: 'board' }
     };
 
@@ -404,6 +405,7 @@ describe('Import & Collision Remapping', () => {
       features: [],
       notes: [],
       reviews: [],
+      dailyTodos: [],
       preferences: { startArea: 'next', buildsView: 'grid' }
     };
 
@@ -422,5 +424,130 @@ describe('Import & Collision Remapping', () => {
     // Task buildId and milestoneId are properly updated
     expect(merged.tasks[0].buildId).toBe(importedBuild.id);
     expect(merged.tasks[0].milestoneId).toBe(merged.milestones[0].id);
+  });
+
+  it('honors deletedIds tombstones during merge to prevent zombie resurrections', () => {
+    const existing: Workspace = {
+      builds: [],
+      milestones: [],
+      tasks: [],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [],
+      deletedIds: {
+        'tod-deleted-1': '2026-11-01T12:00:00.000Z'
+      },
+      preferences: { startArea: 'today', buildsView: 'grid' }
+    };
+
+    const incoming: Workspace = {
+      builds: [],
+      milestones: [],
+      tasks: [],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [
+        {
+          id: 'tod-deleted-1',
+          title: 'Zombie Task',
+          notes: '',
+          completed: false,
+          completedAt: null,
+          date: '2026-11-01',
+          order: 0,
+          rolledFromDate: null,
+          buildId: null,
+          createdAt: '2026-11-01T10:00:00.000Z',
+          updatedAt: '2026-11-01T10:00:00.000Z' // Older than tombstone
+        },
+        {
+          id: 'tod-alive-2',
+          title: 'Active Task',
+          notes: '',
+          completed: false,
+          completedAt: null,
+          date: '2026-11-01',
+          order: 1,
+          rolledFromDate: null,
+          buildId: null,
+          createdAt: '2026-11-01T10:00:00.000Z',
+          updatedAt: '2026-11-01T10:00:00.000Z'
+        }
+      ],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'grid' }
+    };
+
+    const merged = mergeWorkspaces(existing, incoming);
+
+    // Zombie task is filtered out by deletedIds
+    expect(merged.dailyTodos.some(t => t.id === 'tod-deleted-1')).toBe(false);
+    expect(merged.dailyTodos.some(t => t.id === 'tod-alive-2')).toBe(true);
+    expect(merged.deletedIds?.['tod-deleted-1']).toBe('2026-11-01T12:00:00.000Z');
+  });
+
+  it('merges dailyTodos picking the latest updatedAt on edit collisions', () => {
+    const existing: Workspace = {
+      builds: [],
+      milestones: [],
+      tasks: [],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [
+        {
+          id: 'tod-edit-1',
+          title: 'Local Updated Title',
+          notes: 'Finished early',
+          completed: true,
+          completedAt: '2026-11-01T14:00:00.000Z',
+          date: '2026-11-01',
+          order: 0,
+          rolledFromDate: null,
+          buildId: null,
+          createdAt: '2026-11-01T10:00:00.000Z',
+          updatedAt: '2026-11-01T14:00:00.000Z'
+        }
+      ],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'grid' }
+    };
+
+    const incoming: Workspace = {
+      builds: [],
+      milestones: [],
+      tasks: [],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [
+        {
+          id: 'tod-edit-1',
+          title: 'Remote Stale Title',
+          notes: '',
+          completed: false,
+          completedAt: null,
+          date: '2026-11-01',
+          order: 0,
+          rolledFromDate: null,
+          buildId: null,
+          createdAt: '2026-11-01T10:00:00.000Z',
+          updatedAt: '2026-11-01T11:00:00.000Z' // older
+        }
+      ],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'grid' }
+    };
+
+    const merged = mergeWorkspaces(existing, incoming);
+    expect(merged.dailyTodos.length).toBe(1);
+    expect(merged.dailyTodos[0].title).toBe('Local Updated Title');
+    expect(merged.dailyTodos[0].completed).toBe(true);
   });
 });

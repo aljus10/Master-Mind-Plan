@@ -120,8 +120,19 @@ export interface Review extends RecordMeta {
   next: string;
 }
 
+export interface DailyTodo extends RecordMeta {
+  title: string;
+  date: CalendarDate;
+  completed: boolean;
+  completedAt: ISODateTime | null;
+  notes: string;
+  buildId: Id | null;
+  order: number;
+  rolledFromDate?: CalendarDate | null;
+}
+
 export interface UserPreferences {
-  startArea: 'builds' | 'next';
+  startArea: 'today' | 'builds' | 'next';
   buildsView: 'board' | 'grid';
 }
 
@@ -133,6 +144,8 @@ export interface Workspace {
   features: Feature[];
   notes: Note[];
   reviews: Review[];
+  dailyTodos: DailyTodo[];
+  deletedIds?: Record<Id, ISODateTime>;
   preferences: UserPreferences;
 }
 

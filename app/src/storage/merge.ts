@@ -1,26 +1,50 @@
-import { Build, Feature, Id, Idea, Milestone, Note, Review, Task, Workspace } from '../domain/types';
+import { Build, DailyTodo, Feature, Id, Idea, ISODateTime, Milestone, Note, Review, Task, Workspace } from '../domain/types';
 import { generateId } from '../domain/uuid';
 
 /**
- * Deduplicates builds, milestones, tasks, and features in a workspace.
- * Merges items with matching titles into canonical instances,
- * while safely remapping ID collisions when titles differ.
+ * Deduplicates builds, milestones, tasks, daily to-dos, and features in a workspace.
+ * Uses immutable IDs and deletion tombstones to prevent zombie entity resurrection
+ * while safely merging concurrent changes from multiple devices.
  */
 export function deduplicateWorkspace(ws: Workspace): Workspace {
-  if (!ws) return ws;
+  if (!ws) {
+    return {
+      builds: [],
+      milestones: [],
+      tasks: [],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'board' }
+    };
+  }
 
-  // 1. Deduplicate Builds by normalized title
+  const deletedIds: Record<Id, ISODateTime> = ws.deletedIds || {};
+
+  // Helper to check if an entity has been deleted via tombstone
+  const isTombstoned = (id: Id, updatedAt?: string, createdAt?: string): boolean => {
+    const tombstoneTime = deletedIds[id];
+    if (!tombstoneTime) return false;
+    const itemTime = updatedAt || createdAt || '';
+    return tombstoneTime >= itemTime;
+  };
+
+  // 1. Deduplicate Builds by normalized title (or identical ID)
   const buildIdMap = new Map<Id, Id>();
   const uniqueBuilds: Build[] = [];
   const buildByTitle = new Map<string, Build>();
   const seenBuildIds = new Set<Id>();
 
   for (const b of ws.builds || []) {
+    if (isTombstoned(b.id, b.updatedAt, b.createdAt)) continue;
+
     const normTitle = (b.title || '').trim().toLowerCase();
     const existing = buildByTitle.get(normTitle);
 
     if (existing) {
-      // Map duplicate build ID to existing canonical build ID
       buildIdMap.set(b.id, existing.id);
       if (b.updatedAt && (!existing.updatedAt || b.updatedAt > existing.updatedAt)) {
         existing.description = b.description || existing.description;
@@ -52,6 +76,8 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
   const seenMilestoneIds = new Set<Id>();
 
   for (const m of ws.milestones || []) {
+    if (isTombstoned(m.id, m.updatedAt, m.createdAt)) continue;
+
     const canonicalBuildId = buildIdMap.get(m.buildId) || m.buildId;
     const normTitle = (m.title || '').trim().toLowerCase();
     const key = `${canonicalBuildId}:::${normTitle}`;
@@ -83,6 +109,8 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
   const seenTaskIds = new Set<Id>();
 
   for (const t of ws.tasks || []) {
+    if (isTombstoned(t.id, t.updatedAt, t.createdAt)) continue;
+
     const canonicalBuildId = buildIdMap.get(t.buildId) || t.buildId;
     const canonicalMilestoneId = milestoneIdMap.get(t.milestoneId) || t.milestoneId;
     const normTitle = (t.title || '').trim().toLowerCase();
@@ -134,6 +162,8 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
   const seenFeatureIds = new Set<Id>();
 
   for (const f of ws.features || []) {
+    if (isTombstoned(f.id, f.updatedAt, f.createdAt)) continue;
+
     const canonicalBuildId = buildIdMap.get(f.buildId) || f.buildId;
     const normTitle = (f.title || '').trim().toLowerCase();
     const key = `${canonicalBuildId}:::${normTitle}`;
@@ -163,6 +193,7 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
   const uniqueIdeas: Idea[] = [];
   const ideaByKey = new Map<string, Idea>();
   for (const i of ws.ideas || []) {
+    if (isTombstoned(i.id, i.updatedAt, i.createdAt)) continue;
     const canonicalBuildId = buildIdMap.get(i.buildId) || i.buildId;
     const normTitle = (i.title || '').trim().toLowerCase();
     const key = `${canonicalBuildId}:::${normTitle}`;
@@ -176,6 +207,7 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
   const uniqueNotes: Note[] = [];
   const noteByKey = new Map<string, Note>();
   for (const n of ws.notes || []) {
+    if (isTombstoned(n.id, n.updatedAt, n.createdAt)) continue;
     const canonicalBuildId = buildIdMap.get(n.buildId) || n.buildId;
     const normTitle = (n.title || '').trim().toLowerCase();
     const key = `${canonicalBuildId}:::${normTitle}`;
@@ -189,6 +221,7 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
   const uniqueReviews: Review[] = [];
   const reviewByKey = new Map<string, Review>();
   for (const r of ws.reviews || []) {
+    if (isTombstoned(r.id, r.updatedAt, r.createdAt)) continue;
     const canonicalBuildId = buildIdMap.get(r.buildId) || r.buildId;
     const key = `${canonicalBuildId}:::${r.date}`;
     if (!reviewByKey.has(key)) {
@@ -198,7 +231,45 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
     }
   }
 
-  // 6. Update builds nextAction to canonical task IDs
+  // 6. Deduplicate Daily To-Dos strictly by immutable ID
+  const todoById = new Map<Id, DailyTodo>();
+  for (const todo of ws.dailyTodos || []) {
+    if (isTombstoned(todo.id, todo.updatedAt, todo.createdAt)) continue;
+
+    const canonicalBuildId = todo.buildId ? (buildIdMap.get(todo.buildId) || todo.buildId) : null;
+    const existing = todoById.get(todo.id);
+
+    if (existing) {
+      // Merge field by field preferring latest updatedAt
+      if (todo.updatedAt && (!existing.updatedAt || todo.updatedAt > existing.updatedAt)) {
+        existing.title = todo.title || existing.title;
+        existing.date = todo.date || existing.date;
+        existing.notes = todo.notes !== undefined ? todo.notes : existing.notes;
+        existing.completed = todo.completed;
+        existing.completedAt = todo.completedAt;
+        existing.buildId = canonicalBuildId;
+        existing.order = todo.order;
+        existing.rolledFromDate = todo.rolledFromDate || existing.rolledFromDate;
+        existing.updatedAt = todo.updatedAt;
+      } else if (todo.completed && !existing.completed) {
+        // Always honor completion if marked on another device
+        existing.completed = true;
+        existing.completedAt = todo.completedAt || todo.updatedAt;
+      }
+    } else {
+      todoById.set(todo.id, {
+        ...todo,
+        buildId: canonicalBuildId
+      });
+    }
+  }
+
+  const uniqueDailyTodos = Array.from(todoById.values()).sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.order - b.order;
+  });
+
+  // 7. Update builds nextAction to canonical task IDs
   const finalBuilds = uniqueBuilds.map(b => {
     let nextAction = b.nextAction;
     if (nextAction && nextAction.taskId) {
@@ -216,12 +287,15 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
     features: uniqueFeatures,
     notes: uniqueNotes,
     reviews: uniqueReviews,
-    preferences: ws.preferences
+    dailyTodos: uniqueDailyTodos,
+    deletedIds,
+    preferences: ws.preferences || { startArea: 'today', buildsView: 'board' }
   };
 }
 
 /**
- * Merges two workspaces while intelligently deduplicating matching entities.
+ * Merges two workspaces while intelligently deduplicating matching entities
+ * and respecting deletion tombstones across devices.
  */
 export function mergeWorkspaces(existing: Workspace, incoming: Workspace): Workspace {
   if (!existing && !incoming) {
@@ -233,11 +307,21 @@ export function mergeWorkspaces(existing: Workspace, incoming: Workspace): Works
       features: [],
       notes: [],
       reviews: [],
-      preferences: { startArea: 'builds', buildsView: 'board' }
+      dailyTodos: [],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'board' }
     };
   }
   if (!existing) return deduplicateWorkspace(incoming);
   if (!incoming) return deduplicateWorkspace(existing);
+
+  // Combine deletion tombstones with newer timestamp precedence
+  const combinedDeletedIds: Record<Id, ISODateTime> = { ...(existing.deletedIds || {}) };
+  for (const [id, time] of Object.entries(incoming.deletedIds || {})) {
+    if (!combinedDeletedIds[id] || time > combinedDeletedIds[id]) {
+      combinedDeletedIds[id] = time;
+    }
+  }
 
   // Combine raw entities and run deduplication
   const combined: Workspace = {
@@ -248,6 +332,8 @@ export function mergeWorkspaces(existing: Workspace, incoming: Workspace): Works
     features: [...(existing.features || []), ...(incoming.features || [])],
     notes: [...(existing.notes || []), ...(incoming.notes || [])],
     reviews: [...(existing.reviews || []), ...(incoming.reviews || [])],
+    dailyTodos: [...(existing.dailyTodos || []), ...(incoming.dailyTodos || [])],
+    deletedIds: combinedDeletedIds,
     preferences: existing.preferences || incoming.preferences
   };
 

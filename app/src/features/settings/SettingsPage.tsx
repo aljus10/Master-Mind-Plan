@@ -499,9 +499,16 @@ export const SettingsPage: React.FC = () => {
         {/* Start Area Preference */}
         <div className="overview-panel">
           <h3>Default Landing Area</h3>
-          <p>Choose where Future Build Organizer should open when you visit the root URL.</p>
+          <p>Choose where Master Mind Plan should open by default.</p>
 
           <div className="segmented" style={{ display: 'inline-flex', marginTop: 8 }}>
+            <button
+              type="button"
+              className={workspace.preferences.startArea === 'today' ? 'active' : ''}
+              onClick={() => updatePreferences({ startArea: 'today' })}
+            >
+              Daily To-Do (Today)
+            </button>
             <button
               type="button"
               className={workspace.preferences.startArea === 'builds' ? 'active' : ''}

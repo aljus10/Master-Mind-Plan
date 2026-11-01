@@ -189,3 +189,12 @@ export function shiftWeek(anchorDateStr: CalendarDate, delta: number): CalendarD
   const newDate = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + (delta * 7), 12, 0, 0, 0);
   return formatCalendarDate(newDate);
 }
+
+/**
+ * Shifts anchor date by N days forward or backward.
+ */
+export function shiftDays(anchorDateStr: CalendarDate, delta: number): CalendarDate {
+  const anchor = parseCalendarDate(anchorDateStr);
+  const newDate = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + delta, 12, 0, 0, 0);
+  return formatCalendarDate(newDate);
+}

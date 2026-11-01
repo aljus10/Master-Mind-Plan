@@ -2,6 +2,7 @@ import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useWorkspace } from './WorkspaceContext';
 import { Layout } from './Layout';
+import { DailyTodoPage } from '../features/daily/DailyTodoPage';
 import { BuildsPage } from '../features/builds/BuildsPage';
 import { BuildWorkspace } from '../features/builds/BuildWorkspace';
 import { NextStepsPage } from '../features/next-steps/NextStepsPage';
@@ -11,7 +12,8 @@ import { SettingsPage } from '../features/settings/SettingsPage';
 // Redirect root to user's preferred start area
 const RootRedirect: React.FC = () => {
   const { workspace } = useWorkspace();
-  const target = workspace.preferences.startArea === 'next' ? '/next' : '/builds';
+  const startArea = workspace.preferences.startArea;
+  const target = startArea === 'today' ? '/today' : startArea === 'next' ? '/next' : '/builds';
   return <Navigate to={target} replace />;
 };
 
@@ -27,13 +29,14 @@ export const AppRouter: React.FC = () => {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<RootRedirect />} />
+          <Route path="today" element={<DailyTodoPage />} />
           <Route path="builds" element={<BuildsPage />} />
           <Route path="builds/:buildId" element={<BuildDefaultTabRedirect />} />
           <Route path="builds/:buildId/:tab" element={<BuildWorkspace />} />
           <Route path="next" element={<NextStepsPage />} />
           <Route path="archive" element={<ArchivePage />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/builds" replace />} />
+          <Route path="*" element={<Navigate to="/today" replace />} />
         </Route>
       </Routes>
     </HashRouter>
