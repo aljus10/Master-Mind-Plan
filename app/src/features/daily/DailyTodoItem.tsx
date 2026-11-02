@@ -55,6 +55,15 @@ export const DailyTodoItem: React.FC<DailyTodoItemProps> = ({ todo }) => {
     }
   };
 
+  const handleToggle = () => {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(12);
+      } catch {}
+    }
+    toggleDailyTodo(todo.id);
+  };
+
   const formatCompletedTime = (iso: string) => {
     try {
       const d = new Date(iso);
@@ -73,7 +82,7 @@ export const DailyTodoItem: React.FC<DailyTodoItemProps> = ({ todo }) => {
             type="checkbox"
             className="daily-checkbox-input"
             checked={todo.completed}
-            onChange={() => toggleDailyTodo(todo.id)}
+            onChange={handleToggle}
             aria-label={`Mark "${todo.title}" as ${todo.completed ? 'incomplete' : 'complete'}`}
           />
           <span className="daily-checkbox-visual">

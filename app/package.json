@@ -16,8 +16,8 @@
     "test": "vitest run"
   },
   "build": {
-    "appId": "com.aljus10.mastermindplan",
-    "productName": "Master Mind Plan",
+    "appId": "com.aljus10.strata",
+    "productName": "Strata",
     "directories": {
       "output": "dist-electron"
     },
@@ -36,7 +36,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Master Mind Plan"
+      "shortcutName": "Strata"
     }
   },
   "dependencies": {

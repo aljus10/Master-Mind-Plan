@@ -27,6 +27,39 @@ export const Layout: React.FC = () => {
   const archivedBuildsCount = workspace.builds.filter(b => !!b.archivedAt).length;
   const pinnedBuilds = workspace.builds.filter(b => b.pinned && !b.archivedAt);
 
+  // Global keyboard shortcuts (Ctrl+K and "/" for rapid task capture)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const input = document.querySelector('.quick-add-textarea') as HTMLTextAreaElement | null;
+        if (input) {
+          input.focus();
+        } else {
+          navigate('/today');
+          setTimeout(() => {
+            const retryInput = document.querySelector('.quick-add-textarea') as HTMLTextAreaElement | null;
+            retryInput?.focus();
+          }, 60);
+        }
+      } else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
+        e.preventDefault();
+        const input = document.querySelector('.quick-add-textarea') as HTMLTextAreaElement | null;
+        if (input) {
+          input.focus();
+        } else {
+          navigate('/today');
+          setTimeout(() => {
+            const retryInput = document.querySelector('.quick-add-textarea') as HTMLTextAreaElement | null;
+            retryInput?.focus();
+          }, 60);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [navigate]);
+
   // Breadcrumbs
   const getBreadcrumb = () => {
     const parts = location.pathname.split('/').filter(Boolean);
@@ -67,8 +100,14 @@ export const Layout: React.FC = () => {
       {/* Mobile top bar */}
       <div className="mobile-bar">
         <div className="brand">
-          <span className="brand-mark">↗</span>
-          Future Builds
+          <span className="brand-mark strata-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="strata-logo-svg">
+              <rect x="3" y="5" width="18" height="3.2" rx="1.6" className="strata-layer-top" />
+              <rect x="5.5" y="10.8" width="13" height="3.2" rx="1.6" className="strata-layer-mid" />
+              <rect x="8" y="16.6" width="8" height="3.2" rx="1.6" className="strata-layer-base" />
+            </svg>
+          </span>
+          Strata
         </div>
         <button
           className="icon-btn"
@@ -153,8 +192,14 @@ export const Layout: React.FC = () => {
         {/* Desktop Sidebar */}
         <aside className="sidebar" aria-label="Sidebar Navigation">
           <div className="brand">
-            <span className="brand-mark">↗</span>
-            Master Mind Plan
+            <span className="brand-mark strata-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="strata-logo-svg">
+                <rect x="3" y="5" width="18" height="3.2" rx="1.6" className="strata-layer-top" />
+                <rect x="5.5" y="10.8" width="13" height="3.2" rx="1.6" className="strata-layer-mid" />
+                <rect x="8" y="16.6" width="8" height="3.2" rx="1.6" className="strata-layer-base" />
+              </svg>
+            </span>
+            Strata
           </div>
 
           <div className="workspace-label">YOUR WORKSPACE</div>
@@ -243,10 +288,10 @@ export const Layout: React.FC = () => {
             </NavLink>
 
             <div className="profile">
-              <div className="avatar">P</div>
+              <div className="avatar">S</div>
               <div>
-                Personal workspace
-                <small>Ideas worth making room for</small>
+                Strata Workspace
+                <small>Blueprints on bedrock • Daily focus</small>
               </div>
             </div>
           </div>

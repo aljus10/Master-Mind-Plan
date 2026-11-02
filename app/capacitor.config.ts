@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.aljus10.mastermindplan',
-  appName: 'Master Mind Plan',
+  appName: 'Strata',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

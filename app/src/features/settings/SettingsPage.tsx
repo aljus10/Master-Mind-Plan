@@ -385,7 +385,7 @@ export const SettingsPage: React.FC = () => {
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <input
                     type="text"
-                    placeholder="Enter Pairing Key (e.g. MIND-XXXX)"
+                    placeholder="Enter Pairing Key (e.g. STRATA-XXXX or MIND-XXXX)"
                     value={targetPairKey}
                     onChange={e => setTargetPairKey(e.target.value)}
                     style={{
@@ -499,7 +499,7 @@ export const SettingsPage: React.FC = () => {
         {/* Start Area Preference */}
         <div className="overview-panel">
           <h3>Default Landing Area</h3>
-          <p>Choose where Master Mind Plan should open by default.</p>
+          <p>Choose where Strata should open by default.</p>
 
           <div className="segmented" style={{ display: 'inline-flex', marginTop: 8 }}>
             <button

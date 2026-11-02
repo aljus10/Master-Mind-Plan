@@ -144,6 +144,10 @@ export const QuickAddTodoBar: React.FC<QuickAddTodoBarProps> = ({ currentDate, o
 
         {!isExpanded && !isMultiLine && (
           <div className="quick-add-trailing">
+            <span className="quick-add-shortcut-hint" title="Press Ctrl+K or / anywhere to quick-capture">
+              Ctrl+K
+            </span>
+
             {activeBuilds.length > 0 && (
               <select
                 value={selectedBuildId}

@@ -2494,7 +2494,158 @@ svg {
   box-shadow: 0 0 5px var(--accent);
 }
 
+/* ==========================================================================
+   Strata Brand Mark & Impeccable Elevation
+   ========================================================================== */
+
+/* Strata Logo Glyphs */
+.strata-mark {
+  background: #171520 !important;
+  border: 1px solid #3c3452 !important;
+  padding: 3px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+
+.strata-logo-svg {
+  width: 18px;
+  height: 18px;
+  stroke: none;
+  fill: currentColor;
+}
+
+.strata-layer-top {
+  fill: #b5a1ff;
+  filter: drop-shadow(0 0 2px rgba(181, 161, 255, 0.6));
+}
+
+.strata-layer-mid {
+  fill: #7d6fa6;
+}
+
+.strata-layer-base {
+  fill: #4c4366;
+}
+
+/* Tabular Numerics for Metrics & Timestamps */
+.daily-progress-text,
+.daily-meta-badge,
+.count,
+.group-date,
+.daily-date-main,
+.quick-add-yap-pill,
+.daily-celebration-pill {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ambient Elevation Depth over Flat Lines */
+.daily-todo-item {
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+  border: 1px solid #252430;
+}
+
+.daily-todo-item:hover {
+  border-color: #4a4560;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.quick-add-inner {
+  box-shadow: 0 2px 14px -2px rgba(0, 0, 0, 0.45);
+}
+
+/* Empty State Starter Pills */
+.daily-starter-pills {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.daily-starter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #14131c;
+  border: 1px solid #2d2b3c;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: all 120ms ease-out;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.daily-starter-pill:hover {
+  background: #1c1a27;
+  color: var(--text);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.daily-starter-pill:active {
+  transform: scale(0.96);
+  transition: transform 150ms ease-out;
+}
+
+.daily-starter-pill .pill-icon {
+  width: 14px;
+  height: 14px;
+  stroke: var(--accent);
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Quick Add Shortcut Hint */
+.quick-add-shortcut-hint {
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--muted);
+  background: #181722;
+  border: 1px solid #2c2b3d;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+/* Browser Surface Theming (Selection, Caret, Scrollbar) */
+::selection {
+  background: #392f54;
+  color: #f4f4f5;
+}
+
+input, textarea {
+  caret-color: var(--accent);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0c0b10;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #232230;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #363449;
+}
+
 @media (max-width: 700px) {
+  .quick-add-shortcut-hint {
+    display: none;
+  }
   .daily-todo-header {
     flex-direction: column;
     align-items: stretch;

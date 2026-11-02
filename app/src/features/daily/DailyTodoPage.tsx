@@ -41,6 +41,27 @@ export const DailyTodoPage: React.FC = () => {
     return acc;
   }, {});
 
+  const handleStarterAction = (type: 'yap' | 'build' | 'quick') => {
+    const textarea = document.querySelector('.quick-add-textarea') as HTMLTextAreaElement | null;
+    if (!textarea) return;
+    if (type === 'yap') {
+      textarea.value = '- [ ] ';
+      textarea.focus();
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (type === 'quick') {
+      textarea.value = 'Review ';
+      textarea.focus();
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (type === 'build') {
+      const select = document.querySelector('.quick-add-build-select') as HTMLSelectElement | null;
+      if (select) {
+        select.focus();
+      } else {
+        textarea.focus();
+      }
+    }
+  };
+
   return (
     <div className="daily-todo-page">
       {/* Top Header & Date Navigation */}
@@ -106,6 +127,44 @@ export const DailyTodoPage: React.FC = () => {
             <p className="daily-empty-desc">
               Add your high-leverage actions above or paste a quick braindump. Unfinished items roll over automatically.
             </p>
+            <div className="daily-starter-pills">
+              <button
+                type="button"
+                className="daily-starter-pill"
+                onClick={() => handleStarterAction('yap')}
+              >
+                <svg viewBox="0 0 24 24" className="pill-icon">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+                <span>Voice yap / Paste notes</span>
+              </button>
+              <button
+                type="button"
+                className="daily-starter-pill"
+                onClick={() => handleStarterAction('build')}
+              >
+                <svg viewBox="0 0 24 24" className="pill-icon">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+                <span>Link to a Build</span>
+              </button>
+              <button
+                type="button"
+                className="daily-starter-pill"
+                onClick={() => handleStarterAction('quick')}
+              >
+                <svg viewBox="0 0 24 24" className="pill-icon">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+                <span>5-min quick task</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="daily-tasks-list">
