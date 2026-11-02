@@ -1388,13 +1388,11 @@ svg {
   line-height: 1.6;
 }
 
-/* Mobile Bar and Navigation */
-.mobile-bar {
-  display: none;
-}
-
-.mobile-nav {
-  display: none;
+/* Mobile Bar and Navigation - Hidden on Desktop & Large Screens (> 700px) */
+.mobile-bar,
+.mobile-nav,
+.mobile-bottom-nav {
+  display: none !important;
 }
 
 /* Responsive queries */
@@ -1451,7 +1449,7 @@ svg {
     display: none;
   }
   .mobile-bar {
-    display: flex;
+    display: flex !important;
     justify-content: space-between;
     align-items: center;
     padding: 14px 18px;
@@ -1466,7 +1464,7 @@ svg {
     font-size: 15px;
   }
   .mobile-nav {
-    display: flex;
+    display: flex !important;
     gap: 6px;
     padding: 12px 18px;
     background: #141419;
@@ -1521,7 +1519,7 @@ svg {
 
   /* Mobile Bottom Navigation */
   .mobile-bottom-nav {
-    display: flex;
+    display: flex !important;
     position: fixed;
     bottom: 0;
     left: 0;
