@@ -1,6 +1,6 @@
 {
   "name": "strata",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Strata: Architectural blueprints on the bedrock. Tactical focus on the surface.",
   "scripts": {

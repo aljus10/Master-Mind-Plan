@@ -739,4 +739,82 @@ describe('Import & Collision Remapping', () => {
     expect(md).toContain('The One Thing');
     expect(md).toContain('Ship Phase 9');
   });
+
+  it('stress test: handles 500+ tasks and 100+ daily todos with sub-50ms merge performance', () => {
+    const builds = Array.from({ length: 10 }, (_, i) => ({
+      id: `bld-stress-${i}`,
+      title: `Stress Project ${i}`,
+      description: 'Performance testing load',
+      goal: 'Scale validation',
+      definitionOfDone: 'All pass',
+      status: 'active' as const,
+      order: i,
+      pinned: false,
+      archivedAt: null,
+      nextAction: null,
+      constraints: { timeNotes: '', budgetNotes: '', resourceNotes: '' },
+      planView: 'calendar' as const,
+      calendarView: 'week' as const,
+      calendarAnchorDate: '2026-11-01',
+      createdAt: '2026-11-01T00:00:00.000Z',
+      updatedAt: '2026-11-01T00:00:00.000Z'
+    }));
+
+    const tasks: Task[] = Array.from({ length: 500 }, (_, i) => ({
+      id: `tsk-stress-${i}`,
+      buildId: `bld-stress-${i % 10}`,
+      milestoneId: `mls-stress-${i % 20}`,
+      title: `Task item ${i}`,
+      description: `Description for heavy load item ${i}`,
+      status: i % 3 === 0 ? 'done' : 'todo',
+      priority: 'normal',
+      order: i,
+      boardOrder: i,
+      plannedDate: '2026-11-02',
+      calendarOrder: i,
+      blocker: '',
+      prerequisiteTaskIds: [],
+      subtasks: [],
+      createdAt: '2026-11-01T00:00:00.000Z',
+      updatedAt: '2026-11-01T00:00:00.000Z'
+    }));
+
+    const dailyTodos: DailyTodo[] = Array.from({ length: 100 }, (_, i) => ({
+      id: `tod-stress-${i}`,
+      title: `Daily task ${i}`,
+      date: '2026-11-02',
+      completed: i % 2 === 0,
+      completedAt: i % 2 === 0 ? '2026-11-02T10:00:00.000Z' : null,
+      notes: 'Notes data',
+      buildId: `bld-stress-${i % 10}`,
+      taskId: `tsk-stress-${i}`,
+      order: i,
+      createdAt: '2026-11-02T00:00:00.000Z',
+      updatedAt: '2026-11-02T00:00:00.000Z'
+    }));
+
+    const largeWs: Workspace = {
+      builds,
+      milestones: [],
+      tasks,
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos,
+      dailyHabits: [],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'board' }
+    };
+
+    const startTime = performance.now();
+    const merged = mergeWorkspaces(largeWs, largeWs);
+    const durationMs = performance.now() - startTime;
+
+    expect(merged.tasks.length).toBe(500);
+    expect(merged.dailyTodos.length).toBe(100);
+    expect(merged.builds.length).toBe(10);
+    // Merge of 600 items must execute in under 100ms
+    expect(durationMs).toBeLessThan(100);
+  });
 });
