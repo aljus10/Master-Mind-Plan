@@ -127,6 +127,7 @@ export interface DailyTodo extends RecordMeta {
   completedAt: ISODateTime | null;
   notes: string;
   buildId: Id | null;
+  taskId?: Id | null;
   order: number;
   rolledFromDate?: CalendarDate | null;
 }

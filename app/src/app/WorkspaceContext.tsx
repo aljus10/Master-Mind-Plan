@@ -73,6 +73,7 @@ interface WorkspaceContextType {
   deleteDailyTodo: (todoId: Id) => void;
   reorderDailyTodos: (date: CalendarDate, sourceId: Id, targetIndex: number) => void;
   triggerRollover: () => number;
+  sendTaskToToday: (taskId: Id) => DailyTodo | null;
 
   // Daily Habit actions
   addDailyHabit: (title: string, category?: string) => DailyHabit;
@@ -655,20 +656,43 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const toggleDailyTodo = useCallback((todoId: Id) => {
     applyWorkspaceMutation(ws => {
       const now = nowISO();
-      return {
-        ...ws,
-        dailyTodos: (ws.dailyTodos || []).map(t => {
-          if (t.id === todoId) {
-            const nextCompleted = !t.completed;
+      let linkedTaskId: Id | null | undefined = null;
+      let nextCompletedState = false;
+
+      const updatedTodos = (ws.dailyTodos || []).map(t => {
+        if (t.id === todoId) {
+          nextCompletedState = !t.completed;
+          linkedTaskId = t.taskId;
+          return {
+            ...t,
+            completed: nextCompletedState,
+            completedAt: nextCompletedState ? now : null,
+            updatedAt: now
+          };
+        }
+        return t;
+      });
+
+      // Synchronize with blueprint task if linked
+      let updatedTasks = ws.tasks;
+      if (linkedTaskId) {
+        updatedTasks = ws.tasks.map(task => {
+          if (task.id === linkedTaskId) {
+            const targetStatus: TaskStatus = nextCompletedState ? 'done' : 'todo';
             return {
-              ...t,
-              completed: nextCompleted,
-              completedAt: nextCompleted ? now : null,
+              ...task,
+              status: targetStatus,
               updatedAt: now
             };
           }
-          return t;
-        })
+          return task;
+        });
+      }
+
+      return {
+        ...ws,
+        dailyTodos: updatedTodos,
+        tasks: updatedTasks
       };
     }, true);
   }, [applyWorkspaceMutation]);
@@ -706,6 +730,43 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
     }, true);
   }, [applyWorkspaceMutation]);
+
+  const sendTaskToToday = useCallback((taskId: Id): DailyTodo | null => {
+    const ws = currentWorkspaceRef.current;
+    const task = ws.tasks.find(t => t.id === taskId);
+    if (!task) return null;
+
+    const today = getTodayDate();
+    const existing = (ws.dailyTodos || []).find(t => t.taskId === taskId && t.date === today);
+    if (existing) {
+      showToast(`"${task.title}" is already on Today's list!`);
+      return existing;
+    }
+
+    const now = nowISO();
+    const newTodo: DailyTodo = {
+      id: generateId('tod'),
+      title: task.title,
+      date: today,
+      completed: task.status === 'done',
+      completedAt: task.status === 'done' ? now : null,
+      notes: task.description || '',
+      buildId: task.buildId,
+      taskId: task.id,
+      order: (ws.dailyTodos || []).filter(t => t.date === today).length,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    applyWorkspaceMutation(prev => ({
+      ...prev,
+      dailyTodos: [...(prev.dailyTodos || []), newTodo],
+      tasks: prev.tasks.map(t => (t.id === taskId ? { ...t, plannedDate: today, updatedAt: now } : t))
+    }), true);
+
+    showToast(`Sent "${task.title}" to Today's Focus ✓`);
+    return newTodo;
+  }, [applyWorkspaceMutation, showToast]);
 
   // Daily Habit actions
   const addDailyHabit = useCallback((title: string, category = ''): DailyHabit => {
@@ -1325,14 +1386,28 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       applyWorkspaceMutation(prev => {
         let builds = prev.builds;
+        const now = nowISO();
         if (newStatus === 'done') {
           builds = builds.map(b => {
             if (b.nextAction?.taskId === taskId) {
-              return { ...b, nextAction: null, updatedAt: nowISO() };
+              return { ...b, nextAction: null, updatedAt: now };
             }
             return b;
           });
         }
+
+        const updatedDailyTodos = (prev.dailyTodos || []).map(t => {
+          if (t.taskId === taskId) {
+            const isCompleted = newStatus === 'done';
+            return {
+              ...t,
+              completed: isCompleted,
+              completedAt: isCompleted ? now : null,
+              updatedAt: now
+            };
+          }
+          return t;
+        });
 
         return {
           ...prev,
@@ -1343,10 +1418,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   status: newStatus,
                   subtasks,
                   blocker,
-                  updatedAt: nowISO()
+                  updatedAt: now
                 }
               : t
           ),
+          dailyTodos: updatedDailyTodos,
           builds
         };
       }, true);
@@ -1960,6 +2036,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         deleteDailyTodo,
         reorderDailyTodos,
         triggerRollover,
+        sendTaskToToday,
         addDailyHabit,
         updateDailyHabit,
         toggleDailyHabit,

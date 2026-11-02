@@ -625,4 +625,70 @@ describe('Import & Collision Remapping', () => {
     expect(merged.dailyHabits?.[0].completedDates).toContain('2026-11-01');
     expect(merged.dailyHabits?.[0].completedDates).toContain('2026-11-02');
   });
+
+  it('preserves taskId and bi-directional links when deduplicating daily todos', () => {
+    const ws: Workspace = {
+      builds: [{
+        id: 'bld-1',
+        title: 'App Build',
+        description: '',
+        goal: '',
+        definitionOfDone: '',
+        status: 'active',
+        order: 0,
+        pinned: false,
+        archivedAt: null,
+        nextAction: null,
+        constraints: { timeNotes: '', budgetNotes: '', resourceNotes: '' },
+        planView: 'list',
+        calendarView: 'week',
+        calendarAnchorDate: '2026-11-01',
+        createdAt: '2026-11-01T00:00:00.000Z',
+        updatedAt: '2026-11-01T00:00:00.000Z'
+      }],
+      milestones: [],
+      tasks: [{
+        id: 'tsk-1',
+        buildId: 'bld-1',
+        milestoneId: 'mls-1',
+        title: 'Implement Auth',
+        description: '',
+        status: 'todo',
+        priority: 'normal',
+        order: 0,
+        boardOrder: 0,
+        plannedDate: null,
+        calendarOrder: 0,
+        blocker: '',
+        prerequisiteTaskIds: [],
+        subtasks: [],
+        createdAt: '2026-11-01T00:00:00.000Z',
+        updatedAt: '2026-11-01T00:00:00.000Z'
+      }],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [{
+        id: 'tod-1',
+        title: 'Implement Auth',
+        date: '2026-11-02',
+        completed: false,
+        completedAt: null,
+        notes: '',
+        buildId: 'bld-1',
+        taskId: 'tsk-1',
+        order: 0,
+        createdAt: '2026-11-02T00:00:00.000Z',
+        updatedAt: '2026-11-02T00:00:00.000Z'
+      }],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'board' }
+    };
+
+    const merged = mergeWorkspaces(ws, ws);
+    expect(merged.dailyTodos.length).toBe(1);
+    expect(merged.dailyTodos[0].taskId).toBe('tsk-1');
+    expect(merged.dailyTodos[0].buildId).toBe('bld-1');
+  });
 });

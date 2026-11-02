@@ -20,7 +20,8 @@ export const ListPlanView: React.FC<ListPlanViewProps> = ({ build, onOpenTask })
     addTask,
     updateTask,
     reorderTaskMilestone,
-    moveTaskStatus
+    moveTaskStatus,
+    sendTaskToToday
   } = useWorkspace();
 
   const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
@@ -256,6 +257,27 @@ export const ListPlanView: React.FC<ListPlanViewProps> = ({ build, onOpenTask })
                     </small>
 
                     <small>{task.estimatedMinutes ? `${task.estimatedMinutes}m` : ''}</small>
+
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: 11,
+                        minHeight: 26,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        borderRadius: 6
+                      }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        sendTaskToToday(task.id);
+                      }}
+                      title="Send this step to Today's action list"
+                    >
+                      📥 Today
+                    </button>
 
                     <StatusChip status={task.status} type="task" />
                   </div>

@@ -6,7 +6,7 @@ import { evaluateNextAction, getReadyTaskCandidates } from '../../domain/readine
 import { TaskDetailModal } from '../../components/TaskDetailModal';
 
 export const NextStepsPage: React.FC = () => {
-  const { workspace, setNextAction, moveTaskStatus } = useWorkspace();
+  const { workspace, setNextAction, moveTaskStatus, sendTaskToToday } = useWorkspace();
   const navigate = useNavigate();
 
   const [filterBuildStatus, setFilterBuildStatus] = useState<string>('active');
@@ -150,13 +150,24 @@ export const NextStepsPage: React.FC = () => {
                         ⚠ Blocked: {nextActionEval.blockerInfo.summaryReason}
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        className="primary"
-                        onClick={() => handleMarkComplete(nextActionEval.task!.id)}
-                      >
-                        ✓ Mark Complete
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => sendTaskToToday(nextActionEval.task!.id)}
+                          title="Send directly to Today's action list"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        >
+                          📥 Today
+                        </button>
+                        <button
+                          type="button"
+                          className="primary"
+                          onClick={() => handleMarkComplete(nextActionEval.task!.id)}
+                        >
+                          ✓ Mark Complete
+                        </button>
+                      </>
                     )}
 
                     <button

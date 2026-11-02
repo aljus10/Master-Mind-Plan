@@ -3414,6 +3414,165 @@ input, textarea {
   color: #6a6880;
 }
 
+/* ==========================================================================
+   Phase 8: Blueprint Filtering & Bi-Directional Integration
+   ========================================================================== */
+
+.daily-blueprint-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.blueprint-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #7b7890;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.daily-blueprint-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.blueprint-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #171622;
+  border: 1px solid #282638;
+  color: #9d9ab4;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 120ms ease-out;
+}
+
+.blueprint-filter-chip:hover {
+  background: #1f1e2c;
+  color: #f3f2f8;
+  border-color: #3b3950;
+}
+
+.blueprint-filter-chip.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
+  color: #a5b4fc;
+  font-weight: 600;
+}
+
+.chip-mark {
+  font-size: 12px;
+}
+
+.chip-count {
+  font-size: 11px;
+  color: #726f86;
+  background: #12111a;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.blueprint-filter-chip.active .chip-count {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.blueprint-focus-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.12), rgba(13, 12, 19, 0.4));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  gap: 12px;
+  animation: bannerFade 150ms ease-out;
+}
+
+@keyframes bannerFade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.blueprint-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.banner-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.2);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.banner-title {
+  font-size: 13px;
+  color: #f3f2f8;
+}
+
+.banner-jump-link {
+  background: transparent;
+  border: none;
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 120ms ease-out;
+}
+
+.banner-jump-link:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #ffffff;
+}
+
+.daily-empty-filter-state {
+  padding: 28px 20px;
+  text-align: center;
+  color: #8c89a0;
+  font-size: 13px;
+  background: #14131d;
+  border: 1px dashed #262436;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.daily-filter-clear-btn {
+  background: #201f2e;
+  border: 1px solid #323048;
+  color: #c5c3d7;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 120ms ease-out;
+}
+
+.daily-filter-clear-btn:hover {
+  background: #2b293e;
+  color: #ffffff;
+}
+
 @media (max-width: 700px) {
   .focus-mode-card {
     padding: 22px 18px;

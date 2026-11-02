@@ -23,6 +23,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ taskId, onClos
     deleteSubtask,
     moveSubtask,
     setNextAction,
+    sendTaskToToday,
     showToast
   } = useWorkspace();
 
@@ -463,9 +464,18 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({ taskId, onClos
         {/* Actions Bottom Bar */}
         <div
           className="dialog-actions"
-          style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 10 }}
+          style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 10, display: 'flex', gap: 10, alignItems: 'center' }}
         >
-          <button type="button" className="danger-btn" onClick={handleDelete}>
+          <button
+            type="button"
+            className="secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            onClick={() => sendTaskToToday(task.id)}
+            title="Add this task to Today's action list"
+          >
+            📥 Send to Today
+          </button>
+          <button type="button" className="danger-btn" onClick={handleDelete} style={{ marginLeft: 'auto' }}>
             Delete task
           </button>
           <button type="button" className="primary" onClick={onClose}>

@@ -238,6 +238,7 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
     if (isTombstoned(todo.id, todo.updatedAt, todo.createdAt)) continue;
 
     const canonicalBuildId = todo.buildId ? (buildIdMap.get(todo.buildId) || todo.buildId) : null;
+    const canonicalTaskId = todo.taskId ? (taskIdMap.get(todo.taskId) || todo.taskId) : null;
     const existing = todoById.get(todo.id);
 
     if (existing) {
@@ -249,6 +250,7 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
         existing.completed = todo.completed;
         existing.completedAt = todo.completedAt;
         existing.buildId = canonicalBuildId;
+        existing.taskId = canonicalTaskId !== undefined ? canonicalTaskId : existing.taskId;
         existing.order = todo.order;
         existing.rolledFromDate = todo.rolledFromDate || existing.rolledFromDate;
         existing.updatedAt = todo.updatedAt;
@@ -260,7 +262,8 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
     } else {
       todoById.set(todo.id, {
         ...todo,
-        buildId: canonicalBuildId
+        buildId: canonicalBuildId,
+        taskId: canonicalTaskId
       });
     }
   }

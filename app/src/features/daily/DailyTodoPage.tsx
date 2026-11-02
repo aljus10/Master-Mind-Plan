@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../../app/WorkspaceContext';
 import { getTodayDate, shiftDays, formatFriendlyDate } from '../../domain/dates';
 import { DateSwitcher } from './DateSwitcher';
@@ -7,15 +8,17 @@ import { DailyTodoItem } from './DailyTodoItem';
 import { DailyHabitsBar } from './DailyHabitsBar';
 import { FocusModeModal } from './FocusModeModal';
 import { VelocityRhythmBar } from './VelocityRhythmBar';
-import { DailyTodo } from '../../domain/types';
+import { Build, DailyTodo } from '../../domain/types';
 
 export const DailyTodoPage: React.FC = () => {
   const { workspace } = useWorkspace();
+  const navigate = useNavigate();
   const today = getTodayDate();
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
   const [isFocusModeOpen, setIsFocusModeOpen] = useState(false);
   const [focusTargetTodo, setFocusTargetTodo] = useState<DailyTodo | null>(null);
+  const [selectedBuildFilter, setSelectedBuildFilter] = useState<string>('all');
 
   const allTodos = workspace.dailyTodos || [];
 
@@ -29,6 +32,22 @@ export const DailyTodoPage: React.FC = () => {
       }
       return a.order - b.order;
     });
+
+  // Unique builds represented in today's tasks
+  const buildsWithTasks = Array.from(
+    new Set(dateTodos.map(t => t.buildId).filter(Boolean))
+  )
+    .map(id => workspace.builds.find(b => b.id === id))
+    .filter(Boolean) as Build[];
+
+  // Filtered tasks by active blueprint filter
+  const displayedTodos = dateTodos.filter(t => {
+    if (selectedBuildFilter === 'all') return true;
+    if (selectedBuildFilter === 'unassigned') return !t.buildId;
+    return t.buildId === selectedBuildFilter;
+  });
+
+  const activeFilteredBuild = buildsWithTasks.find(b => b.id === selectedBuildFilter);
 
   const totalCount = dateTodos.length;
   const completedCount = dateTodos.filter(t => t.completed).length;
@@ -142,6 +161,64 @@ export const DailyTodoPage: React.FC = () => {
 
       {/* Active Daily Tasks List */}
       <section className="daily-tasks-section" aria-label="Tasks list">
+        {/* Blueprint Filter Chips */}
+        {buildsWithTasks.length > 0 && (
+          <div className="daily-blueprint-filter-bar">
+            <span className="blueprint-filter-label">Blueprint Filter:</span>
+            <div className="daily-blueprint-chips">
+              <button
+                type="button"
+                className={`blueprint-filter-chip ${selectedBuildFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setSelectedBuildFilter('all')}
+              >
+                All ({dateTodos.length})
+              </button>
+              {buildsWithTasks.map(b => {
+                const bCount = dateTodos.filter(t => t.buildId === b.id).length;
+                const bDone = dateTodos.filter(t => t.buildId === b.id && t.completed).length;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className={`blueprint-filter-chip ${selectedBuildFilter === b.id ? 'active' : ''}`}
+                    onClick={() => setSelectedBuildFilter(selectedBuildFilter === b.id ? 'all' : b.id)}
+                  >
+                    <span className="chip-mark">🏗️</span>
+                    <span>{b.title}</span>
+                    <span className="chip-count tabular-nums">{bDone}/{bCount}</span>
+                  </button>
+                );
+              })}
+              {dateTodos.some(t => !t.buildId) && (
+                <button
+                  type="button"
+                  className={`blueprint-filter-chip ${selectedBuildFilter === 'unassigned' ? 'active' : ''}`}
+                  onClick={() => setSelectedBuildFilter(selectedBuildFilter === 'unassigned' ? 'all' : 'unassigned')}
+                >
+                  General
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Active Blueprint Context Card */}
+        {activeFilteredBuild && (
+          <div className="blueprint-focus-banner">
+            <div className="blueprint-banner-left">
+              <span className="banner-badge">BLUEPRINT SCOPE</span>
+              <strong className="banner-title">{activeFilteredBuild.title}</strong>
+            </div>
+            <button
+              type="button"
+              className="banner-jump-link"
+              onClick={() => navigate(`/builds/${activeFilteredBuild.id}/plan`)}
+            >
+              Open Plan Breakdown →
+            </button>
+          </div>
+        )}
+
         {dateTodos.length === 0 ? (
           <div className="daily-empty-state">
             <div className="daily-empty-icon" aria-hidden="true">
@@ -197,9 +274,20 @@ export const DailyTodoPage: React.FC = () => {
               </button>
             </div>
           </div>
+        ) : displayedTodos.length === 0 ? (
+          <div className="daily-empty-filter-state">
+            <p>No actions tagged for this blueprint on {formatFriendlyDate(selectedDate)}.</p>
+            <button
+              type="button"
+              className="daily-filter-clear-btn"
+              onClick={() => setSelectedBuildFilter('all')}
+            >
+              Clear filter & view all
+            </button>
+          </div>
         ) : (
           <div className="daily-tasks-list">
-            {dateTodos.map(todo => (
+            {displayedTodos.map(todo => (
               <DailyTodoItem
                 key={todo.id}
                 todo={todo}
