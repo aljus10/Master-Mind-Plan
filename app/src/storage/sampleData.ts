@@ -6,6 +6,9 @@ export function getSampleBackup(): Backup {
   if (!backup.workspace.dailyTodos) {
     backup.workspace.dailyTodos = [];
   }
+  if (!backup.workspace.dailyHabits) {
+    backup.workspace.dailyHabits = [];
+  }
   if (!backup.workspace.deletedIds) {
     backup.workspace.deletedIds = {};
   }
@@ -17,6 +20,7 @@ export function getSampleWorkspace(): Workspace {
   return {
     ...ws,
     dailyTodos: ws.dailyTodos || [],
+    dailyHabits: ws.dailyHabits || [],
     deletedIds: ws.deletedIds || {}
   };
 }
@@ -31,6 +35,7 @@ export function createEmptyWorkspace(): Workspace {
     notes: [],
     reviews: [],
     dailyTodos: [],
+    dailyHabits: [],
     deletedIds: {},
     preferences: {
       startArea: 'today',

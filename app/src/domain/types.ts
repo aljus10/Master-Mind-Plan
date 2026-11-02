@@ -131,6 +131,14 @@ export interface DailyTodo extends RecordMeta {
   rolledFromDate?: CalendarDate | null;
 }
 
+export interface DailyHabit extends RecordMeta {
+  title: string;
+  category?: string;
+  completedDates: CalendarDate[]; // List of 'YYYY-MM-DD' dates completed
+  order: number;
+  archived?: boolean;
+}
+
 export interface UserPreferences {
   startArea: 'today' | 'builds' | 'next';
   buildsView: 'board' | 'grid';
@@ -145,6 +153,7 @@ export interface Workspace {
   notes: Note[];
   reviews: Review[];
   dailyTodos: DailyTodo[];
+  dailyHabits?: DailyHabit[];
   deletedIds?: Record<Id, ISODateTime>;
   preferences: UserPreferences;
 }

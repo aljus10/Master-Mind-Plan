@@ -1,8 +1,8 @@
-import { Build, DailyTodo, Feature, Id, Idea, ISODateTime, Milestone, Note, Review, Task, Workspace } from '../domain/types';
+import { Build, DailyHabit, DailyTodo, Feature, Id, Idea, ISODateTime, Milestone, Note, Review, Task, Workspace } from '../domain/types';
 import { generateId } from '../domain/uuid';
 
 /**
- * Deduplicates builds, milestones, tasks, daily to-dos, and features in a workspace.
+ * Deduplicates builds, milestones, tasks, daily to-dos, daily habits, and features in a workspace.
  * Uses immutable IDs and deletion tombstones to prevent zombie entity resurrection
  * while safely merging concurrent changes from multiple devices.
  */
@@ -17,6 +17,7 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
       notes: [],
       reviews: [],
       dailyTodos: [],
+      dailyHabits: [],
       deletedIds: {},
       preferences: { startArea: 'today', buildsView: 'board' }
     };
@@ -269,7 +270,33 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
     return a.order - b.order;
   });
 
-  // 7. Update builds nextAction to canonical task IDs
+  // 7. Deduplicate Daily Habits strictly by immutable ID
+  const habitById = new Map<Id, DailyHabit>();
+  for (const habit of ws.dailyHabits || []) {
+    if (isTombstoned(habit.id, habit.updatedAt, habit.createdAt)) continue;
+
+    const existing = habitById.get(habit.id);
+    if (existing) {
+      if (habit.updatedAt && (!existing.updatedAt || habit.updatedAt > existing.updatedAt)) {
+        existing.title = habit.title || existing.title;
+        existing.category = habit.category !== undefined ? habit.category : existing.category;
+        existing.order = habit.order;
+        existing.archived = habit.archived;
+        existing.updatedAt = habit.updatedAt;
+      }
+      const combinedDates = new Set([...existing.completedDates, ...(habit.completedDates || [])]);
+      existing.completedDates = Array.from(combinedDates).sort();
+    } else {
+      habitById.set(habit.id, {
+        ...habit,
+        completedDates: Array.from(new Set(habit.completedDates || [])).sort()
+      });
+    }
+  }
+
+  const uniqueDailyHabits = Array.from(habitById.values()).sort((a, b) => a.order - b.order);
+
+  // 8. Update builds nextAction to canonical task IDs
   const finalBuilds = uniqueBuilds.map(b => {
     let nextAction = b.nextAction;
     if (nextAction && nextAction.taskId) {
@@ -288,6 +315,7 @@ export function deduplicateWorkspace(ws: Workspace): Workspace {
     notes: uniqueNotes,
     reviews: uniqueReviews,
     dailyTodos: uniqueDailyTodos,
+    dailyHabits: uniqueDailyHabits,
     deletedIds,
     preferences: ws.preferences || { startArea: 'today', buildsView: 'board' }
   };
@@ -308,6 +336,7 @@ export function mergeWorkspaces(existing: Workspace, incoming: Workspace): Works
       notes: [],
       reviews: [],
       dailyTodos: [],
+      dailyHabits: [],
       deletedIds: {},
       preferences: { startArea: 'today', buildsView: 'board' }
     };
@@ -333,6 +362,7 @@ export function mergeWorkspaces(existing: Workspace, incoming: Workspace): Works
     notes: [...(existing.notes || []), ...(incoming.notes || [])],
     reviews: [...(existing.reviews || []), ...(incoming.reviews || [])],
     dailyTodos: [...(existing.dailyTodos || []), ...(incoming.dailyTodos || [])],
+    dailyHabits: [...(existing.dailyHabits || []), ...(incoming.dailyHabits || [])],
     deletedIds: combinedDeletedIds,
     preferences: existing.preferences || incoming.preferences
   };

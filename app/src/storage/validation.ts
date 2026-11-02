@@ -22,6 +22,7 @@ export interface ValidationResult {
     notesCount: number;
     reviewsCount: number;
     dailyTodosCount: number;
+    dailyHabitsCount?: number;
   };
 }
 
@@ -73,6 +74,10 @@ export function validateBackupJson(rawJson: string): ValidationResult {
 
   if (ws.dailyTodos !== undefined && !Array.isArray(ws.dailyTodos)) {
     errors.push('Workspace dailyTodos must be an array when provided.');
+  }
+
+  if (ws.dailyHabits !== undefined && !Array.isArray(ws.dailyHabits)) {
+    errors.push('Workspace dailyHabits must be an array when provided.');
   }
 
   if (ws.deletedIds !== undefined && (typeof ws.deletedIds !== 'object' || ws.deletedIds === null)) {
@@ -294,6 +299,28 @@ export function validateBackupJson(rawJson: string): ValidationResult {
     }
   }
 
+  // Validate Daily Habits
+  const habitIdSet = new Set<string>();
+  if (workspace.dailyHabits && Array.isArray(workspace.dailyHabits)) {
+    for (const habit of workspace.dailyHabits) {
+      if (!habit.id || typeof habit.id !== 'string') {
+        errors.push('Every daily habit must have a valid string id.');
+      } else if (habitIdSet.has(habit.id)) {
+        errors.push(`Duplicate daily habit id: "${habit.id}".`);
+      } else {
+        habitIdSet.add(habit.id);
+      }
+
+      if (!habit.title || typeof habit.title !== 'string') {
+        errors.push(`Daily habit "${habit.id || 'unknown'}" is missing required title.`);
+      }
+
+      if (habit.completedDates && !Array.isArray(habit.completedDates)) {
+        errors.push(`Daily habit "${habit.title}" completedDates must be an array.`);
+      }
+    }
+  }
+
   if (errors.length > 0) {
     return { valid: false, errors };
   }
@@ -311,6 +338,7 @@ export function validateBackupJson(rawJson: string): ValidationResult {
       notes: workspace.notes || [],
       reviews: workspace.reviews || [],
       dailyTodos: Array.isArray(workspace.dailyTodos) ? workspace.dailyTodos : [],
+      dailyHabits: Array.isArray(workspace.dailyHabits) ? workspace.dailyHabits : [],
       deletedIds: (workspace.deletedIds && typeof workspace.deletedIds === 'object') ? workspace.deletedIds : {},
       preferences: workspace.preferences || { startArea: 'today', buildsView: 'board' }
     }
@@ -328,7 +356,8 @@ export function validateBackupJson(rawJson: string): ValidationResult {
       featuresCount: validBackup.workspace.features.length,
       notesCount: validBackup.workspace.notes.length,
       reviewsCount: validBackup.workspace.reviews.length,
-      dailyTodosCount: validBackup.workspace.dailyTodos.length
+      dailyTodosCount: validBackup.workspace.dailyTodos.length,
+      dailyHabitsCount: validBackup.workspace.dailyHabits?.length || 0
     }
   };
 }

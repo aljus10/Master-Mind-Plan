@@ -4,12 +4,18 @@ import { getTodayDate, shiftDays, formatFriendlyDate } from '../../domain/dates'
 import { DateSwitcher } from './DateSwitcher';
 import { QuickAddTodoBar } from './QuickAddTodoBar';
 import { DailyTodoItem } from './DailyTodoItem';
+import { DailyHabitsBar } from './DailyHabitsBar';
+import { FocusModeModal } from './FocusModeModal';
+import { VelocityRhythmBar } from './VelocityRhythmBar';
+import { DailyTodo } from '../../domain/types';
 
 export const DailyTodoPage: React.FC = () => {
   const { workspace } = useWorkspace();
   const today = getTodayDate();
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
+  const [isFocusModeOpen, setIsFocusModeOpen] = useState(false);
+  const [focusTargetTodo, setFocusTargetTodo] = useState<DailyTodo | null>(null);
 
   const allTodos = workspace.dailyTodos || [];
 
@@ -67,7 +73,23 @@ export const DailyTodoPage: React.FC = () => {
       {/* Top Header & Date Navigation */}
       <header className="daily-todo-header">
         <div className="daily-header-left">
-          <h1 className="daily-page-title">Daily Focus</h1>
+          <div className="daily-title-row">
+            <h1 className="daily-page-title">Daily Focus</h1>
+            {pendingCount > 0 && (
+              <button
+                type="button"
+                className="daily-focus-mode-btn"
+                onClick={() => {
+                  setFocusTargetTodo(dateTodos.find(t => !t.completed) || null);
+                  setIsFocusModeOpen(true);
+                }}
+                title="Enter distraction-free Focus Mode on today's priority task"
+              >
+                <span className="focus-pulse-dot" />
+                <span>Focus Mode</span>
+              </button>
+            )}
+          </div>
           <p className="daily-page-subtitle">
             Capture, execute, and conquer your day without friction.
           </p>
@@ -78,6 +100,12 @@ export const DailyTodoPage: React.FC = () => {
           onDateChange={setSelectedDate}
         />
       </header>
+
+      {/* 7-Day Completion Momentum */}
+      <VelocityRhythmBar
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+      />
 
       {/* Progress Bar & Counter */}
       {totalCount > 0 && (
@@ -98,6 +126,9 @@ export const DailyTodoPage: React.FC = () => {
           </div>
         </section>
       )}
+
+      {/* Recurring Daily Habits / Routines */}
+      <DailyHabitsBar selectedDate={selectedDate} />
 
       {/* Quick Add Bar */}
       <section className="daily-add-section">
@@ -169,7 +200,14 @@ export const DailyTodoPage: React.FC = () => {
         ) : (
           <div className="daily-tasks-list">
             {dateTodos.map(todo => (
-              <DailyTodoItem key={todo.id} todo={todo} />
+              <DailyTodoItem
+                key={todo.id}
+                todo={todo}
+                onFocus={(t) => {
+                  setFocusTargetTodo(t);
+                  setIsFocusModeOpen(true);
+                }}
+              />
             ))}
           </div>
         )}
@@ -215,7 +253,14 @@ export const DailyTodoPage: React.FC = () => {
                   </div>
                   <div className="daily-upcoming-group-items">
                     {tasks.map(t => (
-                      <DailyTodoItem key={t.id} todo={t} />
+                      <DailyTodoItem
+                        key={t.id}
+                        todo={t}
+                        onFocus={(focusedTask) => {
+                          setFocusTargetTodo(focusedTask);
+                          setIsFocusModeOpen(true);
+                        }}
+                      />
                     ))}
                   </div>
                 </div>
@@ -224,6 +269,15 @@ export const DailyTodoPage: React.FC = () => {
           )}
         </section>
       )}
+
+      {/* Focus Mode Overlay Modal */}
+      <FocusModeModal
+        isOpen={isFocusModeOpen}
+        onClose={() => setIsFocusModeOpen(false)}
+        activeTodo={focusTargetTodo}
+        allDayTodos={dateTodos}
+        onSelectTodo={(t) => setFocusTargetTodo(t)}
+      />
     </div>
   );
 };

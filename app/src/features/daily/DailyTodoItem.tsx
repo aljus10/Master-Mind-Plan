@@ -6,9 +6,10 @@ import { useNavigate } from 'react-router-dom';
 
 interface DailyTodoItemProps {
   todo: DailyTodo;
+  onFocus?: (todo: DailyTodo) => void;
 }
 
-export const DailyTodoItem: React.FC<DailyTodoItemProps> = ({ todo }) => {
+export const DailyTodoItem: React.FC<DailyTodoItemProps> = ({ todo, onFocus }) => {
   const {
     workspace,
     toggleDailyTodo,
@@ -169,6 +170,18 @@ export const DailyTodoItem: React.FC<DailyTodoItemProps> = ({ todo }) => {
 
         {/* Quick action buttons */}
         <div className="daily-todo-actions">
+          {!todo.completed && onFocus && (
+            <button
+              type="button"
+              className="daily-action-btn focus-action-btn"
+              onClick={() => onFocus(todo)}
+              title="Enter Focus Mode on this task"
+              aria-label="Focus on this task"
+            >
+              <span className="focus-dot" /> Focus
+            </button>
+          )}
+
           {!todo.completed && (
             <button
               type="button"

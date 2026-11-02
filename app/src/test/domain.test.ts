@@ -550,4 +550,79 @@ describe('Import & Collision Remapping', () => {
     expect(merged.dailyTodos[0].title).toBe('Local Updated Title');
     expect(merged.dailyTodos[0].completed).toBe(true);
   });
+
+  it('merges daily habits by unifying completedDates and respecting tombstones', () => {
+    const ws1: Workspace = {
+      builds: [],
+      milestones: [],
+      tasks: [],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [],
+      dailyHabits: [
+        {
+          id: 'hab-1',
+          title: 'Morning Standup',
+          completedDates: ['2026-11-01'],
+          order: 0,
+          createdAt: '2026-11-01T08:00:00.000Z',
+          updatedAt: '2026-11-01T08:00:00.000Z'
+        },
+        {
+          id: 'hab-2',
+          title: 'Evening Log',
+          completedDates: [],
+          order: 1,
+          createdAt: '2026-11-01T08:00:00.000Z',
+          updatedAt: '2026-11-01T08:00:00.000Z'
+        }
+      ],
+      deletedIds: {
+        'hab-2': '2026-11-01T09:00:00.000Z' // deleted hab-2 via tombstone
+      },
+      preferences: { startArea: 'today', buildsView: 'board' }
+    };
+
+    const ws2: Workspace = {
+      builds: [],
+      milestones: [],
+      tasks: [],
+      ideas: [],
+      features: [],
+      notes: [],
+      reviews: [],
+      dailyTodos: [],
+      dailyHabits: [
+        {
+          id: 'hab-1',
+          title: 'Morning Standup',
+          completedDates: ['2026-11-02'], // completed on phone next day
+          order: 0,
+          createdAt: '2026-11-01T08:00:00.000Z',
+          updatedAt: '2026-11-02T08:00:00.000Z'
+        },
+        {
+          id: 'hab-2',
+          title: 'Evening Log',
+          completedDates: [],
+          order: 1,
+          createdAt: '2026-11-01T08:00:00.000Z',
+          updatedAt: '2026-11-01T08:00:00.000Z'
+        }
+      ],
+      deletedIds: {},
+      preferences: { startArea: 'today', buildsView: 'board' }
+    };
+
+    const merged = mergeWorkspaces(ws1, ws2);
+    // hab-2 must be excluded by tombstone
+    expect(merged.dailyHabits).toBeDefined();
+    expect(merged.dailyHabits?.length).toBe(1);
+    expect(merged.dailyHabits?.[0].id).toBe('hab-1');
+    // completedDates must union both 2026-11-01 and 2026-11-02
+    expect(merged.dailyHabits?.[0].completedDates).toContain('2026-11-01');
+    expect(merged.dailyHabits?.[0].completedDates).toContain('2026-11-02');
+  });
 });

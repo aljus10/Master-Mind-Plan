@@ -4,6 +4,7 @@ import {
   Build,
   BuildStatus,
   CalendarDate,
+  DailyHabit,
   DailyTodo,
   Feature,
   Id,
@@ -72,6 +73,13 @@ interface WorkspaceContextType {
   deleteDailyTodo: (todoId: Id) => void;
   reorderDailyTodos: (date: CalendarDate, sourceId: Id, targetIndex: number) => void;
   triggerRollover: () => number;
+
+  // Daily Habit actions
+  addDailyHabit: (title: string, category?: string) => DailyHabit;
+  updateDailyHabit: (habitId: Id, updates: Partial<DailyHabit>) => void;
+  toggleDailyHabit: (habitId: Id, date?: CalendarDate) => void;
+  deleteDailyHabit: (habitId: Id) => void;
+  reorderDailyHabits: (sourceId: Id, targetIndex: number) => void;
 
   // Build actions
   addBuild: (title: string, description?: string, category?: string) => Build;
@@ -695,6 +703,83 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }
           return t;
         })
+      };
+    }, true);
+  }, [applyWorkspaceMutation]);
+
+  // Daily Habit actions
+  const addDailyHabit = useCallback((title: string, category = ''): DailyHabit => {
+    const id = generateId('hab');
+    const now = nowISO();
+    const newHabit: DailyHabit = {
+      id,
+      title: title.trim(),
+      category: category.trim() || undefined,
+      completedDates: [],
+      order: (currentWorkspaceRef.current.dailyHabits || []).length,
+      createdAt: now,
+      updatedAt: now
+    };
+    applyWorkspaceMutation(ws => ({
+      ...ws,
+      dailyHabits: [...(ws.dailyHabits || []), newHabit]
+    }), true);
+    showToast('Recurring habit created.');
+    return newHabit;
+  }, [applyWorkspaceMutation, showToast]);
+
+  const updateDailyHabit = useCallback((habitId: Id, updates: Partial<DailyHabit>) => {
+    const now = nowISO();
+    applyWorkspaceMutation(ws => ({
+      ...ws,
+      dailyHabits: (ws.dailyHabits || []).map(h => (h.id === habitId ? { ...h, ...updates, updatedAt: now } : h))
+    }), true);
+  }, [applyWorkspaceMutation]);
+
+  const toggleDailyHabit = useCallback((habitId: Id, date?: CalendarDate) => {
+    const targetDate = date || getTodayDate();
+    const now = nowISO();
+    applyWorkspaceMutation(ws => ({
+      ...ws,
+      dailyHabits: (ws.dailyHabits || []).map(h => {
+        if (h.id === habitId) {
+          const completedSet = new Set(h.completedDates || []);
+          if (completedSet.has(targetDate)) {
+            completedSet.delete(targetDate);
+          } else {
+            completedSet.add(targetDate);
+          }
+          return {
+            ...h,
+            completedDates: Array.from(completedSet).sort(),
+            updatedAt: now
+          };
+        }
+        return h;
+      })
+    }), true);
+  }, [applyWorkspaceMutation]);
+
+  const deleteDailyHabit = useCallback((habitId: Id) => {
+    const now = nowISO();
+    applyWorkspaceMutation(ws => ({
+      ...ws,
+      dailyHabits: (ws.dailyHabits || []).filter(h => h.id !== habitId),
+      deletedIds: {
+        ...(ws.deletedIds || {}),
+        [habitId]: now
+      }
+    }), true);
+    showToast('Habit removed.');
+  }, [applyWorkspaceMutation, showToast]);
+
+  const reorderDailyHabits = useCallback((sourceId: Id, targetIndex: number) => {
+    applyWorkspaceMutation(ws => {
+      const habits = [...(ws.dailyHabits || [])].sort((a, b) => a.order - b.order);
+      const reordered = reorderItems(habits, sourceId, targetIndex);
+      return {
+        ...ws,
+        dailyHabits: reordered.map((h, idx) => ({ ...h, order: idx, updatedAt: nowISO() }))
       };
     }, true);
   }, [applyWorkspaceMutation]);
@@ -1875,6 +1960,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         deleteDailyTodo,
         reorderDailyTodos,
         triggerRollover,
+        addDailyHabit,
+        updateDailyHabit,
+        toggleDailyHabit,
+        deleteDailyHabit,
+        reorderDailyHabits,
         addBuild,
         updateBuild,
         duplicateBuild,
