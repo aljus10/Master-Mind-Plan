@@ -15,7 +15,8 @@ import {
 } from '../domain/dates';
 import { mergeWorkspaces } from '../storage/merge';
 import { validateBackupJson } from '../storage/validation';
-import { Task, Workspace } from '../domain/types';
+import { DailyTodo, Task, Workspace } from '../domain/types';
+import { generateDailyStandupMarkdown } from '../domain/exportMarkdown';
 
 describe('Progress Calculation', () => {
   it('handles empty task list as unplanned', () => {
@@ -690,5 +691,52 @@ describe('Import & Collision Remapping', () => {
     expect(merged.dailyTodos.length).toBe(1);
     expect(merged.dailyTodos[0].taskId).toBe('tsk-1');
     expect(merged.dailyTodos[0].buildId).toBe('bld-1');
+  });
+
+  it('generates markdown standup report with completed items, routines, and primary focus', () => {
+    const todos: DailyTodo[] = [
+      {
+        id: 'tod-1',
+        title: 'Review PRs',
+        date: '2026-11-02',
+        completed: true,
+        completedAt: '2026-11-02T10:00:00.000Z',
+        notes: 'Merged cleanly',
+        buildId: null,
+        order: 0,
+        createdAt: '2026-11-02T08:00:00.000Z',
+        updatedAt: '2026-11-02T10:00:00.000Z'
+      },
+      {
+        id: 'tod-2',
+        title: 'Ship Phase 9',
+        date: '2026-11-02',
+        completed: false,
+        completedAt: null,
+        notes: '',
+        buildId: null,
+        order: 1,
+        createdAt: '2026-11-02T08:00:00.000Z',
+        updatedAt: '2026-11-02T08:00:00.000Z'
+      }
+    ];
+
+    const habits = [
+      {
+        id: 'hab-1',
+        title: 'Morning review',
+        completedDates: ['2026-11-02'],
+        order: 0,
+        createdAt: '',
+        updatedAt: ''
+      }
+    ];
+
+    const md = generateDailyStandupMarkdown('2026-11-02', todos, habits, []);
+    expect(md).toContain('# 📋 Strata Daily Standup');
+    expect(md).toContain('- [x] Review PRs');
+    expect(md).toContain('- [ ] Ship Phase 9');
+    expect(md).toContain('The One Thing');
+    expect(md).toContain('Ship Phase 9');
   });
 });

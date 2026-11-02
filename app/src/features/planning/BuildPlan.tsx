@@ -5,6 +5,7 @@ import { calculateProgress } from '../../domain/readiness';
 import { CalendarPlanView } from '../calendar/CalendarPlanView';
 import { ListPlanView } from './ListPlanView';
 import { BoardPlanView } from './BoardPlanView';
+import { copyToClipboard, generateBuildMarkdown } from '../../domain/exportMarkdown';
 
 interface BuildPlanProps {
   build: Build;
@@ -12,7 +13,7 @@ interface BuildPlanProps {
 }
 
 export const BuildPlan: React.FC<BuildPlanProps> = ({ build, onOpenTask }) => {
-  const { workspace, updateBuild } = useWorkspace();
+  const { workspace, updateBuild, showToast } = useWorkspace();
   const planView = build.planView || 'calendar';
 
   const buildTasks = workspace.tasks.filter(t => t.buildId === build.id);
@@ -20,6 +21,14 @@ export const BuildPlan: React.FC<BuildPlanProps> = ({ build, onOpenTask }) => {
 
   const setPlanView = (v: PlanView) => {
     updateBuild(build.id, { planView: v });
+  };
+
+  const handleCopyMarkdown = async () => {
+    const md = generateBuildMarkdown(build, workspace.milestones, workspace.tasks);
+    const success = await copyToClipboard(md);
+    if (success) {
+      showToast('Blueprint Markdown copied to clipboard! 📋');
+    }
   };
 
   return (
@@ -79,6 +88,27 @@ export const BuildPlan: React.FC<BuildPlanProps> = ({ build, onOpenTask }) => {
             </>
           )}
         </span>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="secondary"
+            style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            onClick={handleCopyMarkdown}
+            title="Copy blueprint summary as Markdown"
+          >
+            📋 Markdown
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+            onClick={() => window.print()}
+            title="Print or Save as PDF"
+          >
+            🖨️ Print
+          </button>
+        </div>
       </div>
 
       {/* Selected View */}

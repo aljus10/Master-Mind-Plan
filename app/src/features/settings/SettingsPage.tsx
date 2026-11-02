@@ -4,6 +4,8 @@ import { repository, STORAGE_KEY } from '../../storage/repository';
 import { ValidationResult } from '../../storage/validation';
 import { Modal } from '../../components/Modal';
 import { getSupabaseConfig } from '../../storage/supabaseSync';
+import { loadSnapshots, createSnapshot, deleteSnapshot, SnapshotItem } from '../../storage/snapshots';
+import { copyToClipboard } from '../../domain/exportMarkdown';
 
 export const SettingsPage: React.FC = () => {
   const {
@@ -35,6 +37,34 @@ export const SettingsPage: React.FC = () => {
   const [supabaseAnonKey, setSupabaseAnonKey] = useState(() => getSupabaseConfig().anonKey);
   const [showCloudConfig, setShowCloudConfig] = useState(() => !getSupabaseConfig().url || !getSupabaseConfig().anonKey);
   const [isPairingLoading, setIsPairingLoading] = useState(false);
+
+  // Local Snapshots state
+  const [snapshots, setSnapshots] = useState<SnapshotItem[]>(() => loadSnapshots());
+
+  const handleCreateSnapshot = () => {
+    createSnapshot(workspace, 'Manual User Snapshot');
+    setSnapshots(loadSnapshots());
+    showToast('Point-in-time snapshot created! 📸');
+  };
+
+  const handleRestoreSnapshot = (snapshot: SnapshotItem) => {
+    if (window.confirm(`Roll back workspace to snapshot from ${new Date(snapshot.timestamp).toLocaleString()}? A safety snapshot of your current state will be preserved first.`)) {
+      createSnapshot(workspace, 'Pre-Rollback Safety Point');
+      const res = importBackup(snapshot.data, 'replace');
+      if (res.success) {
+        setSnapshots(loadSnapshots());
+        showToast('Restored from snapshot! ↺');
+      } else {
+        alert(`Could not restore snapshot: ${res.error}`);
+      }
+    }
+  };
+
+  const handleDeleteSnapshot = (id: string) => {
+    deleteSnapshot(id);
+    setSnapshots(loadSnapshots());
+    showToast('Snapshot removed.');
+  };
 
   // Download backup handler
   const handleDownloadBackup = () => {
@@ -493,6 +523,106 @@ export const SettingsPage: React.FC = () => {
                 style={{ display: 'none' }}
               />
             </label>
+          </div>
+        </div>
+
+        {/* Point-in-Time Restore Points (Snapshots) */}
+        <div className="overview-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <h3 style={{ margin: 0 }}>Point-in-Time Restore Points (Snapshots)</h3>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+                Rolling local snapshots allow instant 1-click rollback without uploading or losing historical state.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleCreateSnapshot}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              📸 Create Snapshot Now
+            </button>
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            {snapshots.length === 0 ? (
+              <div style={{ padding: '14px 16px', background: '#14131c', border: '1px dashed var(--border)', borderRadius: 8, fontSize: 13, color: 'var(--muted)' }}>
+                No snapshots saved yet. Snapshots are created periodically or whenever you click "Create Snapshot Now".
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {snapshots.map(s => {
+                  const dateStr = new Date(s.timestamp).toLocaleString();
+                  return (
+                    <div
+                      key={s.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 14px',
+                        background: '#161522',
+                        border: '1px solid #282638',
+                        borderRadius: 8,
+                        gap: 12,
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                            {dateStr}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              background: 'rgba(99, 102, 241, 0.15)',
+                              color: '#a5b4fc'
+                            }}
+                          >
+                            {s.description}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+                          {s.buildsCount} builds • {s.todosCount} tasks • {s.habitsCount} habits
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="secondary"
+                          style={{ minHeight: 30, padding: '4px 10px', fontSize: 12 }}
+                          onClick={() => handleRestoreSnapshot(s)}
+                          title="Restore workspace to this snapshot point"
+                        >
+                          ↺ Rollback to this
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#6e6b82',
+                            fontSize: 14,
+                            cursor: 'pointer',
+                            padding: '4px 8px'
+                          }}
+                          onClick={() => handleDeleteSnapshot(s.id)}
+                          title="Delete snapshot"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

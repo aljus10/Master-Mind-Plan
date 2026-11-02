@@ -9,9 +9,10 @@ import { DailyHabitsBar } from './DailyHabitsBar';
 import { FocusModeModal } from './FocusModeModal';
 import { VelocityRhythmBar } from './VelocityRhythmBar';
 import { Build, DailyTodo } from '../../domain/types';
+import { copyToClipboard, generateDailyStandupMarkdown } from '../../domain/exportMarkdown';
 
 export const DailyTodoPage: React.FC = () => {
-  const { workspace } = useWorkspace();
+  const { workspace, showToast } = useWorkspace();
   const navigate = useNavigate();
   const today = getTodayDate();
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -87,6 +88,19 @@ export const DailyTodoPage: React.FC = () => {
     }
   };
 
+  const handleCopyStandup = async () => {
+    const md = generateDailyStandupMarkdown(
+      selectedDate,
+      allTodos,
+      workspace.dailyHabits || [],
+      workspace.builds || []
+    );
+    const ok = await copyToClipboard(md);
+    if (ok) {
+      showToast('Daily Standup Markdown copied to clipboard! 📋');
+    }
+  };
+
   return (
     <div className="daily-todo-page">
       {/* Top Header & Date Navigation */}
@@ -108,6 +122,24 @@ export const DailyTodoPage: React.FC = () => {
                 <span>Focus Mode</span>
               </button>
             )}
+
+            <button
+              type="button"
+              className="daily-header-tool-btn"
+              onClick={handleCopyStandup}
+              title="Copy today's standup summary as formatted Markdown"
+            >
+              📋 Standup
+            </button>
+
+            <button
+              type="button"
+              className="daily-header-tool-btn"
+              onClick={() => window.print()}
+              title="Print or Save as PDF"
+            >
+              🖨️ Print
+            </button>
           </div>
           <p className="daily-page-subtitle">
             Capture, execute, and conquer your day without friction.

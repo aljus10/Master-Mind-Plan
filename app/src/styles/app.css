@@ -3573,6 +3573,103 @@ input, textarea {
   color: #ffffff;
 }
 
+/* Daily Header Standup & Print Tool Buttons */
+.daily-header-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #181724;
+  border: 1px solid #282638;
+  color: #9d9ab4;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 120ms ease-out;
+}
+
+.daily-header-tool-btn:hover {
+  background: #232233;
+  color: #f3f2f8;
+  border-color: #3b3950;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Phase 9: High-Contrast Print & PDF Stylesheet
+   ========================================================================== */
+@media print {
+  /* Hide navigation, toolbars, buttons, and backgrounds */
+  .sidebar,
+  .mobile-bar,
+  .mobile-nav,
+  .mobile-bottom-nav,
+  .daily-header-tool-btn,
+  .daily-focus-mode-btn,
+  .daily-date-controls,
+  .daily-add-section,
+  .habits-add-trigger-btn,
+  .habit-delete-btn,
+  .daily-blueprint-filter-bar,
+  .daily-todo-actions,
+  .banner-jump-link,
+  .plan-toolbar button,
+  .topline,
+  .focus-mode-overlay,
+  .toast,
+  .segmented,
+  .daily-upcoming-toggle {
+    display: none !important;
+  }
+
+  body, html, #root, .shell, .main, .daily-todo-page {
+    background: #ffffff !important;
+    color: #111111 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .daily-page-title, h1, h2, h3, strong {
+    color: #000000 !important;
+  }
+
+  .daily-todo-item,
+  .habit-card,
+  .velocity-rhythm-container,
+  .daily-habits-section,
+  .daily-progress-section,
+  .overview-panel {
+    background: #ffffff !important;
+    border: 1px solid #d4d4d8 !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+  }
+
+  .daily-todo-title {
+    color: #111111 !important;
+  }
+
+  .daily-todo-item.completed .daily-todo-title {
+    color: #71717a !important;
+  }
+
+  .daily-checkbox.checked, .habit-checkbox.checked {
+    background: #18181b !important;
+    border-color: #18181b !important;
+  }
+
+  .daily-checkbox, .habit-checkbox {
+    border: 1.5px solid #27272a !important;
+  }
+
+  .overview-panel, .build-card, .daily-tasks-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 @media (max-width: 700px) {
   .focus-mode-card {
     padding: 22px 18px;
